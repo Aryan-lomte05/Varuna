@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 226, 232, 240;
+  --background-start-rgb: 11, 17, 33;
+  --background-end-rgb: 5, 9, 20;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom right,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  background-attachment: fixed;
+  background-size: cover;
+  min-height: 100vh;
+  /* Prevent scrolling on body, let individual panes scroll */
+  overflow: hidden; 
+}
+
+/* Custom Scrollbar for the dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.5); /* argo.cyan */
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  @apply bg-ocean/40 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)];
+}
+
+.glass-card {
+  @apply bg-surface/30 backdrop-blur-md border border-white/5 shadow-lg relative overflow-hidden;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+}
+
+/* Typography styles for Markdown rendering in Chat */
+.prose {
+  @apply text-text-main leading-relaxed;
+}
+.prose h1, .prose h2, .prose h3 {
+  @apply text-white font-display font-semibold mt-6 mb-3;
+}
+.prose h1 { @apply text-2xl; }
+.prose h2 { @apply text-xl border-b border-white/10 pb-2; }
+.prose h3 { @apply text-lg text-argo-cyan; }
+
+.prose p {
+  @apply mb-4;
+}
+.prose ul {
+  @apply list-disc list-inside mb-4 pl-2 space-y-1;
+}
+.prose ol {
+  @apply list-decimal list-inside mb-4 pl-2 space-y-1;
+}
+.prose li {
+  @apply marker:text-argo-cyan;
+}
+.prose strong {
+  @apply text-white font-semibold;
+}
+.prose code {
+  @apply font-mono text-sm bg-black/40 text-argo-cyan px-1.5 py-0.5 rounded border border-white/10;
+}
+.prose pre {
+  @apply bg-black/60 p-4 rounded-xl border border-white/10 overflow-x-auto mb-4;
+}
+.prose pre code {
+  @apply bg-transparent p-0 border-0 text-gray-300;
+}
+.prose table {
+  @apply w-full text-left border-collapse my-4 text-sm;
+}
+.prose th {
+  @apply bg-surface/50 p-2 border-b border-white/10 text-argo-cyan font-medium;
+}
+.prose td {
+  @apply p-2 border-b border-white/5;
+}
+.prose blockquote {
+  @apply border-l-2 border-argo-gold pl-4 text-text-muted italic my-4 bg-surface/20 py-2 rounded-r flex;
+}
+
+/* Mapbox overrides to fit theme */
+.mapboxgl-popup-content {
+  @apply bg-ocean/90 backdrop-blur border border-white/10 text-white rounded-xl shadow-2xl p-0 !important;
+}
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  @apply border-t-ocean/90 !important;
+}
+
+/* Plotly overrides */
+.js-plotly-plot .plotly .scrollbar {
+  display: none !important;
+}
