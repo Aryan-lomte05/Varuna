@@ -1,0 +1,47 @@
+# Node
+node_modules
+.npm
+.pnpm-store
+
+# Python
+.venv
+__pycache__
+*.pyc
+
+# Env
+.env
+**/.env
+**/.env.local
+
+# Chroma vec store
+**/.chroma/
+
+# Misc
+.DS_Store
+*.log
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+.env
+venv/
+pip-wheel-metadata/
+
+# Node (in case you add a web app later)
+node_modules/
+dist/
+.vitepress/cache/
+.vscode/
+
+# Data / Artifacts
+apps/backend/artifacts/
+apps/backend/chroma/
+*.sqlite
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
