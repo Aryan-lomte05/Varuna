@@ -26,10 +26,10 @@ export function useFloats() {
       try {
         setLoading(true);
         // We route through the gateway
-        const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         
-        // This endpoint doesn't require auth since it's just public mapping data
-        const res = await fetch(`${gatewayUrl}/api/v1/explorer/floats`);
+        // Use the Python backend endpoint: /api/v1/floats
+        const res = await fetch(`${apiUrl}/api/v1/floats`);
         
         if (!res.ok) {
           throw new Error(`HTTP Error: ${res.status}`);

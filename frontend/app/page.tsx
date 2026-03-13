@@ -1,10 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Waves } from "lucide-react";
 import { DataStatusBar } from "@/components/ui/DataStatusBar";
 import { DockNav } from "@/components/ui/DockNav";
 import { ChatPanel } from "@/components/ChatPanel";
+import { AnalysisHub } from "@/components/AnalysisHub";
+
+export type ActiveView = "MAP" | "ANALYSIS" | "ACTIVITY" | "SETTINGS";
 
 // Heavy WebGL components — dynamic import to avoid SSR crash
 const OceanMap  = dynamic(() => import("@/components/OceanMap"),  { ssr: false });
@@ -30,59 +35,116 @@ const panel = {
 };
 
 export default function DashboardPage() {
+  const [chatOpen, setChatOpen] = useState(true);
+  const [activeView, setActiveView] = useState<ActiveView>("MAP");
+
   return (
-    // taste-skill: NEVER h-screen → always min-h-[100dvh]
-    <div className="flex flex-col min-h-[100dvh] overflow-hidden">
-      {/* Top status strip */}
-      <DataStatusBar />
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-bg">
+      {/* ── Background Map layer (Always present, but blurred in other views) ── */}
+      <div className={`absolute inset-0 z-0 transition-all duration-700 ${activeView !== "MAP" ? "blur-md scale-105 opacity-40" : "blur-0 scale-100 opacity-100"}`}>
+        <OceanMap />
+        {/* Layered Gradient for depth */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-bg/40 via-transparent to-bg/60" />
+      </div>
 
-      {/* taste-skill: asymmetric split-screen — not centered hero */}
-      <motion.div
-        className="flex flex-1 gap-3 p-3 overflow-hidden"
-        variants={container}
-        initial="hidden"
-        animate="show"
+      {/* ── View Content Area ────────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        {activeView === "ANALYSIS" && (
+          <motion.div
+            key="analysis"
+            initial={{ opacity: 0, filter: "blur(10px)" }}
+            animate={{ opacity: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, filter: "blur(10px)" }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 z-10"
+          >
+            <AnalysisHub />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Top Navigation / Branding ────────────────────────────────────── */}
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="absolute top-0 left-0 right-0 z-20 p-6 flex items-center justify-between pointer-events-none"
       >
-        {/* Left column — map (60%) + globe (40% of left column height) */}
-        <motion.section
-          variants={panel}
-          className="flex flex-col flex-[3] gap-3 min-w-0 overflow-hidden"
-        >
-          {/* Primary map — fills most of left column */}
-          <div className="flex-[2] relative rounded-2xl overflow-hidden glass noise min-h-0">
-            <OceanMap />
-            {/* Subtle corner label — taste-skill: don't float random UI */}
-            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur border border-white/8">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent dot-live" />
-              <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">
-                ARGO Fleet
-              </span>
+        <div className="flex items-center gap-4 pointer-events-auto">
+          <div className="glass px-4 py-2 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center">
+              <Waves size={18} className="text-accent" />
+            </div>
+            <div>
+              <h1 className="text-sm font-mono font-bold tracking-tight text-text">FLOAT_CHAT.v2</h1>
+              <p className="text-[10px] font-mono text-text-3 uppercase tracking-[0.2em]">Ocean Intelligence Core</p>
             </div>
           </div>
-
-          {/* Globe strip — contextual minimap */}
-          <div className="flex-[1] relative rounded-2xl overflow-hidden glass noise min-h-0" style={{ minHeight: "240px" }}>
-            <OceanGlobe />
-            <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur border border-white/8">
-              <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">
-                3D Globe Context
-              </span>
-            </div>
+          
+          <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl glass">
+            <span className="w-2 h-2 rounded-full bg-accent dot-live" />
+            <span className="text-[10px] font-mono text-text-2 uppercase tracking-widest">Global Fleet: Live</span>
           </div>
-        </motion.section>
+        </div>
 
-        {/* Right column — Chat (40%) */}
-        <motion.aside
-          variants={panel}
-          className="flex-[2] flex flex-col min-w-0 min-h-0"
-          style={{ maxWidth: "460px" }}
-        >
-          <ChatPanel />
-        </motion.aside>
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <DataStatusBar />
+        </div>
       </motion.div>
 
-      {/* macOS-style floating dock */}
-      <DockNav />
+      {/* ── Floating Side HUD (Chat) ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {chatOpen && (
+          <motion.aside
+            initial={{ x: 400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            className="absolute top-24 bottom-28 right-6 z-20 w-full max-w-[420px] pointer-events-auto"
+          >
+            <ChatPanel />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* ── Metrics Overlay (Left Side) ──────────────────────────────────── */}
+      <motion.div 
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="absolute bottom-28 left-6 z-20 flex flex-col gap-3 pointer-events-auto"
+      >
+        <div className="glass p-4 rounded-2xl w-64">
+          <h3 className="text-[10px] font-mono text-text-3 uppercase tracking-widest mb-3">Fleet Health</h3>
+          <div className="space-y-3">
+            {[
+              { label: "Active Nodes", val: "3,842", color: "var(--accent)" },
+              { label: "Data Latency", val: "14ms", color: "var(--accent-secondary)" },
+              { label: "System Sync", val: "99.8%", color: "var(--accent)" }
+            ].map(m => (
+              <div key={m.label} className="flex items-end justify-between">
+                <span className="text-[11px] text-text-2 font-mono">{m.label}</span>
+                <span className="text-sm font-bold font-mono" style={{ color: m.color }}>{m.val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Navigation Dock ──────────────────────────────────────────────── */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
+        <div className="pointer-events-auto pb-6">
+          <DockNav 
+            activeId={activeView} 
+            onViewChange={(id) => {
+              if (id === "chat") {
+                setChatOpen(!chatOpen);
+              } else {
+                setActiveView(id as ActiveView);
+              }
+            }} 
+          />
+        </div>
+      </div>
     </div>
   );
 }

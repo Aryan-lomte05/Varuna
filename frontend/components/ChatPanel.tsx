@@ -33,14 +33,13 @@ function TypingSkeleton() {
       exit={{ opacity: 0 }}
       className="flex gap-2.5"
     >
-      <div className="w-7 h-7 rounded-lg bg-accent/10 border border-accent/20 shrink-0 mt-0.5 flex items-center justify-center">
-        <Zap size={12} className="text-accent" />
+      <div className="w-7 h-7 rounded-lg bg-glow/10 border border-glow/20 shrink-0 mt-0.5 flex items-center justify-center anim-pulse">
+        <Zap size={12} className="text-glow" />
       </div>
-      <div className="flex flex-col gap-2 flex-1 pt-1">
-        <div className="skeleton h-3 w-[80%] rounded" />
-        <div className="skeleton h-3 w-[60%] rounded" />
-        <div className="skeleton h-3 w-[70%] rounded" />
-        <div className="skeleton h-3 w-[45%] rounded" />
+      <div className="flex flex-col gap-2 flex-1 pt-1 opacity-60">
+        <div className="skeleton-ocean h-3 w-[80%] rounded" />
+        <div className="skeleton-ocean h-3 w-[60%] rounded" />
+        <div className="skeleton-ocean h-3 w-[70%] rounded" />
       </div>
     </motion.div>
   );
@@ -62,28 +61,29 @@ export function ChatPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full glass rounded-2xl overflow-hidden noise">
+    <div className="flex flex-col h-full bg-bg-1/90 backdrop-blur-xl border border-border-strong rounded-2xl overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.6)]">
+      <div className="noise opacity-[0.03] absolute inset-0 pointer-events-none" />
       {/* ── Terminal-style header ─────────────────────────────────────────── */}
       <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
-            <Terminal size={13} className="text-accent" />
+          <div className="w-8 h-8 rounded-lg bg-glow/10 border border-glow/30 flex items-center justify-center">
+            <Terminal size={14} className="text-glow" />
           </div>
           <div>
-            <div className="text-[13px] font-mono font-medium text-zinc-200 leading-tight">
-              FloatChat AI
+            <div className="text-[13px] font-mono font-bold text-text tracking-tight uppercase">
+              ARGO_INTEL.v2
             </div>
-            <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-tight">
-              ARGO Intelligence Core
+            <div className="text-[9px] font-mono text-text-muted uppercase tracking-[0.2em]">
+              Primary Analysis Hub
             </div>
           </div>
         </div>
 
         {/* Connection pill */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/8 border border-accent/15">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20">
           <span className="w-1.5 h-1.5 rounded-full bg-accent dot-live" />
-          <span className="text-[10px] font-mono text-accent uppercase tracking-widest">
-            WS Connected
+          <span className="text-[9px] font-mono text-accent uppercase tracking-[0.1em]">
+            Sync: Active
           </span>
         </div>
       </div>
@@ -156,10 +156,10 @@ export function ChatPanel() {
               {/* Bubble */}
               <div
                 className={`
-                  max-w-[85%] rounded-2xl px-3.5 py-3 text-sm
+                  max-w-[90%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed
                   ${m.role === "user"
-                    ? "bg-white/5 border border-white/8 text-zinc-200 rounded-tr-sm"
-                    : "bg-zinc-900/80 border border-white/6 backdrop-blur-sm prose prose-invert rounded-tl-sm"
+                    ? "bg-bg-1 border border-border text-text rounded-tr-sm shadow-xl"
+                    : "bg-bg-2/30 border border-border/50 backdrop-blur-md prose prose-ocean rounded-tl-sm shadow-inner"
                   }
                 `}
               >
@@ -259,11 +259,11 @@ export function ChatPanel() {
             disabled={isTyping}
             placeholder={isTyping ? "Synthesizing…" : "Ask about ocean data…"}
             className={`
-              flex-1 bg-white/4 rounded-xl px-4 py-2.5 text-[13px] font-sans
-              text-zinc-200 placeholder-zinc-600
+              flex-1 bg-bg-2/50 rounded-xl px-4 py-2.5 text-[13px] font-sans
+              text-text placeholder-text-dim
               border transition-all duration-200 outline-none
               disabled:opacity-40
-              ${focused ? "border-accent/40 ring-1 ring-accent/20" : "border-white/8 hover:border-white/15"}
+              ${focused ? "border-accent/60 ring-1 ring-accent/20" : "border-border/30 hover:border-border/60"}
             `}
           />
           {/* taste-skill: tactile scale-[0.97] on active press */}

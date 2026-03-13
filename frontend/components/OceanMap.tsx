@@ -33,9 +33,9 @@ export default function OceanMap() {
         lineWidthMinPixels: 0.5,
         getPosition: (d: any) => [d.lon, d.lat],
         getRadius: (d: any) => 12000, 
-        // Emerald for active, Zinc-500/Amber for other
-        getFillColor: (d: any) => d.status === 'active' ? [16, 185, 129, 210] : [245, 158, 11, 150],
-        getLineColor: (d: any) => d.status === 'active' ? [16, 185, 129, 255] : [255, 255, 255, 50],
+        // Tropical Aqua for active, Zinc-500 for other
+        getFillColor: (d: any) => d.status === 'active' ? [46, 230, 198, 220] : [100, 116, 139, 150],
+        getLineColor: (d: any) => d.status === 'active' ? [46, 230, 198, 255] : [255, 255, 255, 40],
         getCursor: () => 'crosshair',
         transitions: {
           getPosition: { duration: 1000, easing: (t: number) => t * (2 - t) }
@@ -83,12 +83,12 @@ export default function OceanMap() {
               </div>
             `,
             style: {
-              backgroundColor: 'rgba(9, 9, 11, 0.85)', // zinc-950
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '8px',
-              color: 'white',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
+              backgroundColor: 'rgba(7, 26, 45, 0.95)', // Midnight Water
+              border: '1px solid rgba(46, 230, 198, 0.15)',
+              borderRadius: '12px',
+              color: '#D6F6FF',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
             }
           };
         }}

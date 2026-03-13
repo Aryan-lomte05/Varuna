@@ -23,12 +23,14 @@ export function DataStatusBar() {
   const [lastQuery, setLastQuery] = useState<string | null>(null);
 
   useEffect(() => {
-    // Probe the gateway
-    fetch(process.env.NEXT_PUBLIC_API_URL + "/health")
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+    // Probe the backend health
+    fetch(apiUrl + "/health")
       .then((r) => { if (r.ok) setConnected(true); })
       .catch(() => setConnected(false));
 
-    fetch(process.env.NEXT_PUBLIC_API_URL + "/api/floats?limit=1")
+    fetch(apiUrl + "/api/v1/floats?limit=1")
       .then((r) => r.json())
       .then((d) => setFloatCount(d?.total ?? d?.length ?? 0))
       .catch(() => {});

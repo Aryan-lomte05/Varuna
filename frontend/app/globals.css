@@ -6,17 +6,31 @@
 
 @layer base {
   :root {
-    --bg: #09090b;          /* zinc-950 — the real dark */
-    --bg-1: #111113;        /* zinc-900 */
-    --bg-2: #18181b;        /* zinc-800 */
-    --border: rgba(255,255,255,0.06);
-    --border-strong: rgba(255,255,255,0.12);
-    --accent: #10b981;      /* emerald-500 — single accent, full stop */
-    --accent-dim: rgba(16,185,129,0.12);
-    --accent-glow: rgba(16,185,129,0.25);
-    --text: #f4f4f5;        /* zinc-100 */
-    --text-2: #a1a1aa;      /* zinc-400 */
-    --text-3: #52525b;      /* zinc-600 */
+    /* Deep Ocean Base */
+    --bg: #071A2D;          /* Midnight Water - Main Background */
+    --bg-1: #0A2540;        /* Deep Ocean Blue - Panels / Containers */
+    --bg-2: #051421;        /* Abyss Blue - Deep Contrast */
+    
+    /* Primary Accent (Interactive) */
+    --accent: #2EE6C6;      /* Tropical Aqua */
+    --accent-secondary: #1ECBE1; /* Ocean Cyan */
+    
+    /* Highlight / Glow (AI Identity) */
+    --glow: #00FFC6;        /* Bioluminescent Green */
+    --accent-glow: rgba(0, 255, 198, 0.3);
+
+    /* Contrast / Alerts */
+    --coral: #FF7F50;        /* Coral Orange */
+    --coral-dim: #FF6B6B;    /* Reef Red */
+    
+    /* Text */
+    --text: #D6F6FF;        /* Soft Ice Blue */
+    --text-muted: #809aab;
+    --text-dim: #405a6b;
+
+    /* Semantic Mappings */
+    --border: rgba(46, 230, 198, 0.12);
+    --border-strong: rgba(46, 230, 198, 0.22);
   }
 
   html {

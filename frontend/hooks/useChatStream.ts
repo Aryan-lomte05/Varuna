@@ -30,16 +30,14 @@ export function useChatStream() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
 
-    let gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_WS_URL || 'ws://localhost:4000';
-    if (!process.env.NEXT_PUBLIC_GATEWAY_WS_URL && process.env.NEXT_PUBLIC_API_URL) {
-      gatewayUrl = process.env.NEXT_PUBLIC_API_URL.replace('http', 'ws');
-    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const wsUrl = apiUrl.replace('http', 'ws');
     
     try {
-      const ws = new WebSocket(`${gatewayUrl}/ws/chat?token=dev-token`);
+      const ws = new WebSocket(`${wsUrl}/ws/chat?token=dev-token`);
       
       ws.onopen = () => {
-        console.log('🔗 WebSocket connected to Gateway');
+        console.log('🔗 WebSocket connected to Backend');
         setError(null);
       };
 
@@ -132,7 +130,7 @@ export function useChatStream() {
   const sendMessage = useCallback((content: string) => {
     if (!content.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        setError("WebSocket is not connected. Is the Gateway running?");
+        setError("WebSocket is not connected. Is the Python Backend running?");
       }
       return;
     }
