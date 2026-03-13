@@ -1,0 +1,8 @@
+{
+  "source_directories": [
+    "services/api"
+  ],
+  "search_path": [
+    "services/api/venv/Lib/site-packages"
+  ]
+}
