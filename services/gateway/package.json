@@ -1,0 +1,26 @@
+{
+  "name": "floatchat-gateway",
+  "version": "2.0.0",
+  "description": "API Gateway for FloatChat AI",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "http-proxy": "^1.18.1",
+    "http-proxy-middleware": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/http-proxy": "^1.17.17",
+    "@types/node": "^20.19.37",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}
