@@ -1,114 +1,204 @@
 "use client";
 
-import { useChatStream } from '@/hooks/useChatStream';
-import { Send, Loader2, Bot, User, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChartRouter } from './Charts';
+import { useChatStream } from "@/hooks/useChatStream";
+import { Send, ArrowRight, RefreshCw, Terminal, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChartRouter } from "./Charts";
 
-export default function ChatPanel() {
+// taste-skill: stagger orchestration — parent wrapper lives in this client tree
+const msgVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 28 } },
+};
+
+// taste-skill: bento grid of prompt chips, NOT a centered bot icon
+const STARTER_PROMPTS = [
+  { label: "5 floats near Mumbai",         query: "Find the 5 closest floats to Mumbai." },
+  { label: "Temp profile Arabian Sea",     query: "Show me the temperature profile in the Arabian Sea 0–2000m." },
+  { label: "Salinity Bay of Bengal",       query: "What is the average salinity in the Bay of Bengal?" },
+  { label: "ARGO near Maldives",           query: "Show me the nearest ARGO float to the Maldives." },
+  { label: "Oxygen trend Indian Ocean",    query: "Average oxygen levels in the Equatorial Indian Ocean?" },
+  { label: "Float 1902303 trajectory",     query: "Where is float 1902303 right now?" },
+];
+
+// Skeleton shimmer for AI response loading — no spinner
+function TypingSkeleton() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex gap-2.5"
+    >
+      <div className="w-7 h-7 rounded-lg bg-accent/10 border border-accent/20 shrink-0 mt-0.5 flex items-center justify-center">
+        <Zap size={12} className="text-accent" />
+      </div>
+      <div className="flex flex-col gap-2 flex-1 pt-1">
+        <div className="skeleton h-3 w-[80%] rounded" />
+        <div className="skeleton h-3 w-[60%] rounded" />
+        <div className="skeleton h-3 w-[70%] rounded" />
+        <div className="skeleton h-3 w-[45%] rounded" />
+      </div>
+    </motion.div>
+  );
+}
+
+export function ChatPanel() {
   const { messages, input, setInput, sendMessage, isTyping, error } = useChatStream();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [focused, setFocused] = useState(false);
 
-  // Auto-scroll to bottom of chat
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!input.trim()) return;
     sendMessage(input);
   };
 
   return (
-    <div className="flex flex-col h-full glass-card rounded-2xl">
-      {/* Header */}
-      <div className="p-4 border-b border-white/5 flex items-center justify-between z-10 bg-surface/50 backdrop-blur-md rounded-t-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-argo-blue/20 flex items-center justify-center border border-argo-blue/50 shadow-[0_0_15px_rgba(58,134,255,0.3)]">
-            <Bot size={18} className="text-argo-cyan" />
+    <div className="flex flex-col h-full glass rounded-2xl overflow-hidden noise">
+      {/* ── Terminal-style header ─────────────────────────────────────────── */}
+      <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
+            <Terminal size={13} className="text-accent" />
           </div>
           <div>
-            <h2 className="text-white font-display font-medium leading-tight">FloatChat AI</h2>
-            <p className="text-xs text-argo-cyan/70 font-mono">ARGO Intelligence Core</p>
+            <div className="text-[13px] font-mono font-medium text-zinc-200 leading-tight">
+              FloatChat AI
+            </div>
+            <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest leading-tight">
+              ARGO Intelligence Core
+            </div>
           </div>
+        </div>
+
+        {/* Connection pill */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/8 border border-accent/15">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent dot-live" />
+          <span className="text-[10px] font-mono text-accent uppercase tracking-widest">
+            WS Connected
+          </span>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      {/* ── Messages area ─────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+        {/* Empty state: bento grid of prompt chips — not a centered icon */}
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-50 space-y-4">
-            <Bot size={48} className="text-argo-cyan mb-2" />
-            <p className="text-sm max-w-[250px]">
-              Ask me about ocean temperatures, ARGO trajectories, or complex marine data analysis.
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center max-w-[300px] mt-4">
-              <span className="text-xs border border-white/10 rounded-full px-3 py-1 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setInput("Where is float 1902303?")}>
-                Where is float 1902303?
-              </span>
-              <span className="text-xs border border-white/10 rounded-full px-3 py-1 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setInput("Show me the temperature profile in the Arabian Sea.")}>
-                Temp profile Arabian Sea
-              </span>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-full flex flex-col justify-center gap-6"
+          >
+            <div>
+              <p className="text-xs font-mono uppercase tracking-widest text-zinc-600 mb-3">
+                Query the intelligence core
+              </p>
+              {/* taste-skill: Bento Grid, NOT a centered bot icon */}
+              <div className="grid grid-cols-2 gap-2">
+                {STARTER_PROMPTS.map((p) => (
+                  <motion.button
+                    key={p.label}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setInput(p.query)}
+                    className="
+                      group text-left p-3 rounded-xl
+                      bg-white/3 hover:bg-white/6
+                      border border-white/6 hover:border-white/12
+                      transition-colors duration-150
+                    "
+                  >
+                    <span className="block text-[11px] font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors leading-snug">
+                      {p.label}
+                    </span>
+                    <ArrowRight
+                      size={11}
+                      className="mt-1.5 text-zinc-700 group-hover:text-accent transition-colors"
+                    />
+                  </motion.button>
+                ))}
+              </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        <AnimatePresence>
+        {/* Message list */}
+        <AnimatePresence initial={false}>
           {messages.map((m, idx) => (
-            <motion.div 
+            <motion.div
               key={m.id || idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
+              variants={msgVariants}
+              initial="hidden"
+              animate="show"
+              className={`flex gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
-              <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 border ${
-                m.role === 'user' 
-                  ? 'bg-ocean border-white/10' 
-                  : 'bg-argo-blue/10 border-argo-cyan/30 text-argo-cyan'
-              }`}>
-                {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+              {/* Avatar */}
+              <div
+                className={`
+                  shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5 border text-[11px] font-mono font-bold
+                  ${m.role === "user"
+                    ? "bg-white/5 border-white/10 text-zinc-400"
+                    : "bg-accent/10 border-accent/20 text-accent"
+                  }
+                `}
+              >
+                {m.role === "user" ? "U" : "AI"}
               </div>
 
-              <div className={`max-w-[85%] rounded-2xl p-4 ${
-                m.role === 'user'
-                  ? 'bg-ocean border border-white/5 text-white'
-                  : 'bg-surface/30 border border-white/5 backdrop-blur-sm prose prose-invert'
-              }`}>
-                {m.role === 'assistant' ? (
-                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                     {m.content || "..."}
-                   </ReactMarkdown>
+              {/* Bubble */}
+              <div
+                className={`
+                  max-w-[85%] rounded-2xl px-3.5 py-3 text-sm
+                  ${m.role === "user"
+                    ? "bg-white/5 border border-white/8 text-zinc-200 rounded-tr-sm"
+                    : "bg-zinc-900/80 border border-white/6 backdrop-blur-sm prose prose-invert rounded-tl-sm"
+                  }
+                `}
+              >
+                {m.role === "assistant" ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {m.content || "..."}
+                  </ReactMarkdown>
                 ) : (
-                  <p className="whitespace-pre-wrap text-sm">{m.content}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</p>
                 )}
 
-                {/* Sub-components for metadata (SQL, Debug, Viz) */}
+                {/* Visualization */}
                 {m.metadata?.viz_specs && (
-                  <div className="mt-4 w-full h-[350px]">
+                  <div className="mt-4 w-full h-[320px]">
                     <ChartRouter vizSpecs={m.metadata.viz_specs} />
                   </div>
                 )}
 
+                {/* SQL badge */}
                 {m.metadata?.sql && (
-                  <div className="mt-3 text-xs font-mono bg-black/50 p-2 rounded border border-white/5 text-gray-400 overflow-x-auto">
-                    <span className="text-argo-gold mr-2 text-[10px] uppercase tracking-wider">Executed SQL</span>
+                  <div className="mt-3 text-[10px] font-mono bg-black/40 px-2.5 py-2 rounded-lg border border-white/5 text-zinc-500 overflow-x-auto">
+                    <span className="text-accent/70 mr-2 uppercase tracking-widest text-[9px]">SQL</span>
                     {m.metadata.sql}
                   </div>
                 )}
-                
-                {/* Intent Badge */}
+
+                {/* Intent + Trace row */}
                 {m.metadata?.intent && (
-                  <div className="mt-2 flex gap-2">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-white/5 border border-white/10 text-argo-cyan font-mono uppercase">
-                      INTENT: {m.metadata.intent}
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-accent/8 border border-accent/15 text-accent font-mono uppercase tracking-widest">
+                      {m.metadata.intent}
                     </span>
                     {m.trace_id && (
-                       <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-white/5 border border-white/10 text-text-muted font-mono uppercase cursor-help" title={`Trace ID: ${m.trace_id}`}>
-                         TRACE: {m.trace_id.substring(0,6)}
-                       </span>
+                      <span
+                        className="px-2 py-0.5 rounded text-[9px] bg-white/4 border border-white/8 text-zinc-600 font-mono uppercase cursor-help"
+                        title={`Trace: ${m.trace_id}`}
+                      >
+                        {m.trace_id.substring(0, 8)}
+                      </span>
                     )}
                   </div>
                 )}
@@ -116,53 +206,90 @@ export default function ChatPanel() {
             </motion.div>
           ))}
         </AnimatePresence>
-        
-        {isTyping && messages[messages.length-1]?.role === 'user' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-             <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 border bg-argo-blue/10 border-argo-cyan/30 text-argo-cyan">
-                <Bot size={16} />
+
+        {/* AI typing: skeleton shimmer, not a spinner */}
+        <AnimatePresence>
+          {isTyping && messages[messages.length - 1]?.role === "user" && (
+            <TypingSkeleton />
+          )}
+        </AnimatePresence>
+
+        {/* Error state */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-start gap-2.5 p-3 rounded-xl border border-red-500/20 bg-red-500/5"
+            >
+              <div className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                <span className="text-red-400 text-[10px] font-bold">!</span>
               </div>
-              <div className="bg-surface/30 border border-white/5 rounded-2xl p-4 flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-argo-cyan" />
-                <span className="text-sm text-text-muted">Synthesizing...</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-mono text-red-400 mb-2">{error}</p>
+                {/* taste-skill: retry button with tactile feedback */}
+                <button
+                  onClick={() => sendMessage(input)}
+                  className="flex items-center gap-1 text-[10px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors active:scale-95"
+                >
+                  <RefreshCw size={10} />
+                  Retry
+                </button>
               </div>
-          </motion.div>
-        )}
-        
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-sm flex items-start gap-2">
-            <X size={16} className="mt-0.5 shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-surface/50 backdrop-blur-md border-t border-white/5 rounded-b-2xl z-10">
-        <form onSubmit={handleSubmit} className="relative flex items-center">
+      {/* ── Input area ────────────────────────────────────────────────────── */}
+      <div className="shrink-0 px-4 py-3 border-t border-white/5">
+        <form
+          onSubmit={handleSubmit}
+          className="relative flex items-center gap-2"
+        >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             disabled={isTyping}
-            placeholder={isTyping ? "Model is thinking..." : "Ask about ocean data..."}
-            className="w-full bg-black/40 border border-white/10 rounded-full py-3 pl-5 pr-12 text-sm text-white placeholder-text-muted focus:outline-none focus:border-argo-cyan/50 focus:ring-1 focus:ring-argo-cyan/50 transition-all disabled:opacity-50 font-sans"
+            placeholder={isTyping ? "Synthesizing…" : "Ask about ocean data…"}
+            className={`
+              flex-1 bg-white/4 rounded-xl px-4 py-2.5 text-[13px] font-sans
+              text-zinc-200 placeholder-zinc-600
+              border transition-all duration-200 outline-none
+              disabled:opacity-40
+              ${focused ? "border-accent/40 ring-1 ring-accent/20" : "border-white/8 hover:border-white/15"}
+            `}
           />
-          <button 
-            type="submit" 
+          {/* taste-skill: tactile scale-[0.97] on active press */}
+          <motion.button
+            type="submit"
             disabled={!input.trim() || isTyping}
-            className="absolute right-2 p-2 bg-argo-blue hover:bg-opacity-80 disabled:bg-white/10 text-white rounded-full transition-colors flex items-center justify-center group"
+            whileTap={{ scale: 0.94 }}
+            className={`
+              shrink-0 w-9 h-9 rounded-xl flex items-center justify-center
+              transition-colors duration-150
+              ${input.trim() && !isTyping
+                ? "bg-accent hover:bg-accent/90 text-white"
+                : "bg-white/5 text-zinc-600 cursor-not-allowed"
+              }
+            `}
           >
-            {isTyping ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Send size={16} className="group-hover:translate-x-0.5 transition-transform" />
-            )}
-          </button>
+            <Send size={15} />
+          </motion.button>
         </form>
+        <p className="text-[10px] font-mono text-zinc-700 mt-2 text-center">
+          FloatChat AI — ARGO Intelligence Core
+        </p>
       </div>
     </div>
   );
 }
+
+// Also keep default export for backward compatibility
+export default ChatPanel;
