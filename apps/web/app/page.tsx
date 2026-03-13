@@ -1,65 +1,88 @@
-import ChatPanel from "@/components/ChatPanel";
-import OceanMap from "@/components/OceanMap";
-import { OceanGlobe } from "@/components/Globe/OceanGlobe";
-import { Activity, Settings, Database, Waves } from "lucide-react";
+"use client";
 
-export default function DashboardLayout() {
+import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
+import { DataStatusBar } from "@/components/ui/DataStatusBar";
+import { DockNav } from "@/components/ui/DockNav";
+import { ChatPanel } from "@/components/ChatPanel";
+
+// Heavy WebGL components — dynamic import to avoid SSR crash
+const OceanMap  = dynamic(() => import("@/components/OceanMap"),  { ssr: false });
+const OceanGlobe = dynamic(
+  () => import("@/components/Globe/OceanGlobe").then((m) => ({ default: m.OceanGlobe })),
+  { ssr: false }
+);
+
+// taste-skill: stagger parent → children waterfall reveal
+const container = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const panel = {
+  hidden: { opacity: 0, y: 16 },
+  show:   { opacity: 1, y: 0, transition: { type: "spring", stiffness: 220, damping: 26 } },
+};
+
+export default function DashboardPage() {
   return (
-    <main className="flex h-screen w-full p-4 gap-4 box-border">
-      
-      {/* Sidebar Navigation (Slim, Icon-based) */}
-      <nav className="w-16 h-full glass-card rounded-2xl flex flex-col items-center py-6 justify-between border-white/5">
-        <div className="flex flex-col items-center gap-8">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-argo-blue to-argo-cyan flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.4)]">
-            <Waves className="text-white" size={20} />
-          </div>
-          
-          <div className="flex flex-col gap-6 mt-4">
-            <NavItem icon={<Activity size={20} />} active tooltip="Fleet Overview" />
-            <NavItem icon={<Database size={20} />} tooltip="Data Explorer" />
-            <NavItem icon={<Settings size={20} />} tooltip="Settings" />
-          </div>
-        </div>
-        
-        <div className="w-8 h-8 rounded-full border-2 border-white/20 overflow-hidden bg-surface/50">
-           {/* Placeholder Avatar */}
-           <img src="https://api.dicebear.com/8.x/bottts/svg?seed=argo" alt="User" />
-        </div>
-      </nav>
+    // taste-skill: NEVER h-screen → always min-h-[100dvh]
+    <div className="flex flex-col min-h-[100dvh] overflow-hidden">
+      {/* Top status strip */}
+      <DataStatusBar />
 
-      {/* Main Map Content - Takes up flex-grow */}
-      <section className="flex-1 h-full relative flex flex-col gap-4">
-         <div className="flex-1 relative">
+      {/* taste-skill: asymmetric split-screen — not centered hero */}
+      <motion.div
+        className="flex flex-1 gap-3 p-3 overflow-hidden"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
+        {/* Left column — map (60%) + globe (40% of left column height) */}
+        <motion.section
+          variants={panel}
+          className="flex flex-col flex-[3] gap-3 min-w-0 overflow-hidden"
+        >
+          {/* Primary map — fills most of left column */}
+          <div className="flex-[2] relative rounded-2xl overflow-hidden glass noise min-h-0">
             <OceanMap />
-         </div>
-         <div className="h-1/3 min-h-[300px] relative overflow-hidden glass-card rounded-2xl">
+            {/* Subtle corner label — taste-skill: don't float random UI */}
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur border border-white/8">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent dot-live" />
+              <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">
+                ARGO Fleet
+              </span>
+            </div>
+          </div>
+
+          {/* Globe strip — contextual minimap */}
+          <div className="flex-[1] relative rounded-2xl overflow-hidden glass noise min-h-0" style={{ minHeight: "240px" }}>
             <OceanGlobe />
-         </div>
-      </section>
+            <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur border border-white/8">
+              <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">
+                3D Globe Context
+              </span>
+            </div>
+          </div>
+        </motion.section>
 
-      {/* Side Chat Panel - Takes up 450px width fixed */}
-      <aside className="w-[450px] h-full shrink-0">
-         <ChatPanel />
-      </aside>
+        {/* Right column — Chat (40%) */}
+        <motion.aside
+          variants={panel}
+          className="flex-[2] flex flex-col min-w-0 min-h-0"
+          style={{ maxWidth: "460px" }}
+        >
+          <ChatPanel />
+        </motion.aside>
+      </motion.div>
 
-    </main>
-  );
-}
-
-function NavItem({ icon, active, tooltip }: { icon: React.ReactNode, active?: boolean, tooltip: string }) {
-  return (
-    <div className="relative group cursor-pointer">
-      <div className={`p-3 rounded-xl transition-all ${
-        active 
-          ? 'bg-argo-cyan/10 text-argo-cyan shadow-[inset_0_0_10px_rgba(0,240,255,0.2)] border border-argo-cyan/20' 
-          : 'text-text-muted hover:text-white hover:bg-white/5'
-      }`}>
-        {icon}
-      </div>
-      {/* Tooltip */}
-      <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-xs rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-        {tooltip}
-      </div>
+      {/* macOS-style floating dock */}
+      <DockNav />
     </div>
   );
 }
