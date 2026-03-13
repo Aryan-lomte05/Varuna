@@ -3,7 +3,7 @@ Run: python -m src.mcp.server
 """
 from model_context_protocol import MCPServer
 from src.tools.sql_tools import execute_sql, semantic_search
-from src.db.postgres import run_sql
+from src.database.postgres import run_sql
 
 srv = MCPServer("floatchat-mcp")
 

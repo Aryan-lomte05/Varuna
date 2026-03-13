@@ -3,7 +3,7 @@
 # from langchain_community.vectorstores import Chroma
 # from langchain_community.embeddings import HuggingFaceEmbeddings
 # from src.config import settings
-# from src.db.postgres import run_sql
+# from src.database.postgres import run_sql
 
 
 # _embed = HuggingFaceEmbeddings(model_name=settings.embed_model)
@@ -18,9 +18,9 @@
 
 # def execute_sql(sql: str, limit: int = 200):
 #  return run_sql(sql, limit=limit)
-# Hinglish: SQL tools — Chroma semantic search (graceful fallback) + safe SQL execute wrapper.
+# Hinglish: SQL tools â€” Chroma semantic search (graceful fallback) + safe SQL execute wrapper.
 # Goals:
-# - Agar Chroma/embeddings init fail ho, to app crash na ho — bas empty context return karo.
+# - Agar Chroma/embeddings init fail ho, to app crash na ho â€” bas empty context return karo.
 # - execute_sql() LIMIT ko double-append na kare; rely on run_sql() ka smart behavior.
 # - User-facing koi string nahi; sirf comments Hinglish me.
 
@@ -28,24 +28,24 @@ from __future__ import annotations
 
 from typing import List, Tuple, Optional
 
-from src.db.postgres import run_sql
+from src.database.postgres import run_sql
 from src.config import settings
 
-# Optional deps — init guarded (first-run me vector store ho ya na ho, app chalna chahiye)
+# Optional deps â€” init guarded (first-run me vector store ho ya na ho, app chalna chahiye)
 _store = None
 try:
     from langchain_community.vectorstores import Chroma
     from langchain_community.embeddings import HuggingFaceEmbeddings
 
     # Hinglish: Embeddings + Chroma lazy-ish init; agar directory empty ho tab bhi object ban jayega,
-    # lekin search me zero results mil sakte hain — that’s fine.
+    # lekin search me zero results mil sakte hain â€” thatâ€™s fine.
     _embed = HuggingFaceEmbeddings(model_name=settings.embed_model)
     _store = Chroma(
         persist_directory=settings.chroma_dir,
         embedding_function=_embed,
     )
 except Exception as _e:
-    # Hinglish: Logging optional; hard print avoid — upstream logger agar hai to use kar sakte ho.
+    # Hinglish: Logging optional; hard print avoid â€” upstream logger agar hai to use kar sakte ho.
     _store = None
 
 

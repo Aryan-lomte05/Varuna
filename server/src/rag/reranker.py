@@ -1,5 +1,5 @@
 """
-FloatChat AI — LLM-as-a-Reranker
+FloatChat AI â€” LLM-as-a-Reranker
 
 WHY LLM-as-a-Reranker?
   Standard embedding cosine similarity (Bi-Encoders) is fast but misses nuances
@@ -16,7 +16,7 @@ import re
 from typing import List, Dict, Any
 
 from src.config import settings  # type: ignore
-from src.models.ollama_client import _generate  # type: ignore
+from src.llm.ollama_client import _generate  # type: ignore
 
 log = logging.getLogger(__name__)
 

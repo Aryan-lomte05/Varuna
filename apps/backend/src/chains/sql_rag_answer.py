@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-# Hinglish: Compact SQL chain — deterministic SQL + extreme context + relax window + narration.
+# Hinglish: Compact SQL chain â€” deterministic SQL + extreme context + relax window + narration.
 
 from __future__ import annotations
 import re
 from typing import List, Dict, Any, Optional
 
-from src.db.postgres import run_sql as execute_sql
+from src.database.postgres import run_sql as execute_sql
 from src.config import settings
 from src.chains.sql_extremes import detect_extreme, build_context_sql
 from src.chains.narrate import load_narrator, narrate
 
-OCEAN_GREETING = "🌊 ahoy!"
+OCEAN_GREETING = "ðŸŒŠ ahoy!"
 MAX_ROWS_RETURN = 300
 
 def _extract_base_where(sql: str) -> tuple[str, Optional[str]]:
@@ -65,7 +65,7 @@ def _mk_table(rows: List[Dict[str, Any]]) -> List[str]:
 
 def answer(question: str, sql: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     """
-    Hinglish: deterministic path — aap pehle se SQL bana rahe ho (NL→SQL model/template se).
+    Hinglish: deterministic path â€” aap pehle se SQL bana rahe ho (NLâ†’SQL model/template se).
     Is function ka kaam: execute + extremes context + relax retry + narration + markdown.
     """
     md: List[str] = [f"{OCEAN_GREETING} ### Result Summary"]

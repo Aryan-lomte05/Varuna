@@ -7,15 +7,17 @@
 ## Current Codebase Audit (All 4 Branches)
 
 ### What Exists (Good Foundations)
-| Branch | What's There |
-|---|---|
-| [main](file:///e:/floatchatai-main/apps/backend/src/embeddings/build_vectorstore.py#18-32) | FastAPI server, Qwen2.5-3B+LoRA NL→SQL, psycopg2, in-memory sessions, geo utils |
-| `Adi_main_api_backend` | Node.js Argo NetCDF ingestion service (cron-based), fintuning data (JSONL) |
-| `Adi_semantic` | Qdrant RAG agent, SentenceTransformer embeddings (768d), geospatial query decomposition |
-| `FINAL_MAIN` | Full Next.js 14 frontend with 15+ Plotly chart types (Hovmöller, TS-Isopycnals, 3D Surface, Anomaly, WindRose, DepthProfiles, Scatter, TimeSeries), MapCanvas (Leaflet), ChatDock, DiagramGallery |
-| `Aditya_ui` | React+Vite float dashboard, TrajectoryMap, ProfileCharts |
+
+| Branch                                                                                     | What's There                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [main](file:///e:/floatchatai-main/apps/backend/src/embeddings/build_vectorstore.py#18-32) | FastAPI server, Qwen2.5-3B+LoRA NL→SQL, psycopg2, in-memory sessions, geo utils                                                                                                                   |
+| `Adi_main_api_backend`                                                                     | Node.js Argo NetCDF ingestion service (cron-based), fintuning data (JSONL)                                                                                                                        |
+| `Adi_semantic`                                                                             | Qdrant RAG agent, SentenceTransformer embeddings (768d), geospatial query decomposition                                                                                                           |
+| `FINAL_MAIN`                                                                               | Full Next.js 14 frontend with 15+ Plotly chart types (Hovmöller, TS-Isopycnals, 3D Surface, Anomaly, WindRose, DepthProfiles, Scatter, TimeSeries), MapCanvas (Leaflet), ChatDock, DiagramGallery |
+| `Aditya_ui`                                                                                | React+Vite float dashboard, TrajectoryMap, ProfileCharts                                                                                                                                          |
 
 ### Critical Weaknesses
+
 1. **No real ingestion pipeline** — NetCDF → DB automated flow is broken/incomplete
 2. **Chroma vectorstore has only 2 hardcoded docs** — completely useless for RAG
 3. **HuggingFace model loading in FastAPI process** — blocks server, can't scale
@@ -167,31 +169,31 @@ User Query
 
 ## Memory Stack (11 Layers)
 
-| # | Layer | Storage | Purpose |
-|---|---|---|---|
-| 1 | Raw Knowledge | MinIO / local FS | Immutable NetCDF + papers |
-| 2 | Processed Knowledge | Parquet + DuckDB | Columnar analytics |
-| 3 | Embedding Memory | Qdrant | Vector index of summaries + docs |
-| 4 | RAG Working Memory | In-process dict | Context per query |
-| 5 | Context Assembly | In-process | Ranked chunk window |
-| 6 | Conversation Memory | Redis | Session history (20-turn window) |
-| 7 | User Personalization | PostgreSQL | Preferred regions, variables |
-| 8 | Feedback Memory | PostgreSQL | User corrections, ratings |
-| 9 | Knowledge Graph | Neo4j / NetworkX | Float→Region→Variable links |
-| 10 | Temporal Memory | PostgreSQL (time-indexed) | Timestamp-aware recency bias |
-| 11 | Forgetting Layer | Redis TTL | Decay stale working context |
+| #   | Layer                | Storage                   | Purpose                          |
+| --- | -------------------- | ------------------------- | -------------------------------- |
+| 1   | Raw Knowledge        | MinIO / local FS          | Immutable NetCDF + papers        |
+| 2   | Processed Knowledge  | Parquet + DuckDB          | Columnar analytics               |
+| 3   | Embedding Memory     | Qdrant                    | Vector index of summaries + docs |
+| 4   | RAG Working Memory   | In-process dict           | Context per query                |
+| 5   | Context Assembly     | In-process                | Ranked chunk window              |
+| 6   | Conversation Memory  | Redis                     | Session history (20-turn window) |
+| 7   | User Personalization | PostgreSQL                | Preferred regions, variables     |
+| 8   | Feedback Memory      | PostgreSQL                | User corrections, ratings        |
+| 9   | Knowledge Graph      | Neo4j / NetworkX          | Float→Region→Variable links      |
+| 10  | Temporal Memory      | PostgreSQL (time-indexed) | Timestamp-aware recency bias     |
+| 11  | Forgetting Layer     | Redis TTL                 | Decay stale working context      |
 
 ---
 
 ## Multi-Model System (Ollama)
 
-| Model | Task | When Used |
-|---|---|---|
-| `qwen2.5:14b` | NL → SQL generation | Every data query |
-| `llama3:8b` | Scientific narration + summarization | After SQL results |
-| `deepseek-coder:6.7b` | Complex SQL + code generation | BGC/multi-table joins |
-| `nomic-embed-text` | Text embeddings (768d) | Ingestion + retrieval |
-| `qwen2.5:3b` | Query rewriting + intent detection | Fast, every query |
+| Model                 | Task                                 | When Used             |
+| --------------------- | ------------------------------------ | --------------------- |
+| `qwen2.5:14b`         | NL → SQL generation                  | Every data query      |
+| `llama3:8b`           | Scientific narration + summarization | After SQL results     |
+| `deepseek-coder:6.7b` | Complex SQL + code generation        | BGC/multi-table joins |
+| `nomic-embed-text`    | Text embeddings (768d)               | Ingestion + retrieval |
+| `qwen2.5:3b`          | Query rewriting + intent detection   | Fast, every query     |
 
 **All served via Ollama** — no HuggingFace inference in the API process.
 
@@ -256,28 +258,29 @@ CREATE TABLE user_preferences (
 
 ## Query Types that MUST Work
 
-| Category | Example | Handler |
-|---|---|---|
-| Nearest float | "Nearest ARGO float to Mumbai" | geo→PostGIS ST_DWithin |
-| Depth profile | "Depth profile at 19.1, 72.85 on 2025-07-03" | SQL+Plotly |
-| Time-window stat | "Max temp Arabian Sea past 30 days" | SQL CTE extrema |
-| Multi-variable | "Temp vs Salinity near equator March 2023" | SQL multi-col + TS scatter |
-| BGC variables | "Chlorophyll-a trends Bay of Bengal 6 months" | SQL + time series |
-| Comparison | "Compare salinity Arabian Sea vs Bay of Bengal" | DuckDB dual query |
-| Seasonal | "Monthly avg doxy last 12 months at equator" | SQL GROUP BY month |
-| Trend analysis | "Temperature trend in 2022 Indian Ocean" | SQL + regression |
-| Float trajectory | "Track float 1902367 over 90 days" | SQL trajectory + map |
-| Complex multi-hop | "Compare BGC params in Arabian Sea last 6mo and find nearest floats" | Query decomposition |
-| Semantic/fuzzy | "What ocean variables indicate upwelling?" | Qdrant RAG |
-| Math | "2+2" | eval() |
-| Smalltalk | "Hello" | direct handler |
-| Export | "Give me the CSV of this result" | DuckDB COPY |
+| Category          | Example                                                              | Handler                    |
+| ----------------- | -------------------------------------------------------------------- | -------------------------- |
+| Nearest float     | "Nearest ARGO float to Mumbai"                                       | geo→PostGIS ST_DWithin     |
+| Depth profile     | "Depth profile at 19.1, 72.85 on 2025-07-03"                         | SQL+Plotly                 |
+| Time-window stat  | "Max temp Arabian Sea past 30 days"                                  | SQL CTE extrema            |
+| Multi-variable    | "Temp vs Salinity near equator March 2023"                           | SQL multi-col + TS scatter |
+| BGC variables     | "Chlorophyll-a trends Bay of Bengal 6 months"                        | SQL + time series          |
+| Comparison        | "Compare salinity Arabian Sea vs Bay of Bengal"                      | DuckDB dual query          |
+| Seasonal          | "Monthly avg doxy last 12 months at equator"                         | SQL GROUP BY month         |
+| Trend analysis    | "Temperature trend in 2022 Indian Ocean"                             | SQL + regression           |
+| Float trajectory  | "Track float 1902367 over 90 days"                                   | SQL trajectory + map       |
+| Complex multi-hop | "Compare BGC params in Arabian Sea last 6mo and find nearest floats" | Query decomposition        |
+| Semantic/fuzzy    | "What ocean variables indicate upwelling?"                           | Qdrant RAG                 |
+| Math              | "2+2"                                                                | eval()                     |
+| Smalltalk         | "Hello"                                                              | direct handler             |
+| Export            | "Give me the CSV of this result"                                     | DuckDB COPY                |
 
 ---
 
 ## Frontend Architecture (Next.js 14)
 
 ### Panels
+
 ```
 ┌──────────────────────────────────────────────────────┐
 │  🌊 FloatChat AI                    [Mode: Research] │
@@ -298,6 +301,7 @@ CREATE TABLE user_preferences (
 ```
 
 ### Chart Types to Merge from FINAL_MAIN
+
 - `DepthProfilesByMonth.tsx` — classic oceanographic profiles
 - `Hovmoller.tsx` — Hovmöller diagrams (depth vs time)
 - `TSIsopycnals.tsx` — T-S diagrams with isopycnal overlays
@@ -343,6 +347,7 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 ## Implementation Roadmap
 
 ### Phase 1 — Foundation (Week 1–2)
+
 - [ ] Set up Docker stack: PostgreSQL+PostGIS, Qdrant, Redis, Ollama
 - [ ] Install Ollama models: qwen2.5:14b, llama3:8b, deepseek-coder:6.7b, nomic-embed-text
 - [ ] Upgrade schema: add PostGIS `geom` column, partitioned tables 2022–2026
@@ -350,6 +355,7 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 - [ ] Load ARGO Indian Ocean data into PostgreSQL
 
 ### Phase 2 — RAG Pipeline (Week 2–3)
+
 - [ ] Replace HuggingFace inference with Ollama HTTP client (`models/ollama_client.py`)
 - [ ] Build hybrid retriever: BM25 (rank_bm25) + Qdrant vector search
 - [ ] Add cross-encoder reranker (ms-marco-MiniLM via Ollama)
@@ -360,12 +366,14 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 - [ ] Redis-backed conversation memory (replace in-memory deque)
 
 ### Phase 3 — Observability (Week 3)
+
 - [ ] Add structlog colored pipeline logging to all RAG steps
 - [ ] OpenTelemetry spans for each pipeline stage
 - [ ] Build `/debug` endpoint returning full trace JSON
 - [ ] Color-coded terminal output for all 14 pipeline steps
 
 ### Phase 4 — Frontend (Week 4)
+
 - [ ] Merge FINAL_MAIN `Desktop/web/` into `apps/web/` as the real frontend
 - [ ] Add Three.js interactive globe (`components/Globe/`)
 - [ ] Add WebSocket streaming for chat responses
@@ -375,12 +383,14 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 - [ ] Add dataset explorer with DuckDB-powered filtering
 
 ### Phase 5 — Knowledge Graph + Feedback (Week 5)
+
 - [ ] Build float→region→variable KG using NetworkX
 - [ ] User personalization (preferred regions/variables in PostgreSQL)
 - [ ] Feedback endpoint: rating + corrections stored and used in retrieval ranking
 - [ ] Temporal recency bias in retrieval
 
 ### Phase 6 — Polish (Week 6)
+
 - [ ] ARGO data export: CSV / NetCDF / Parquet
 - [ ] All edge-case query types tested
 - [ ] Load testing
@@ -391,6 +401,7 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 ## Verification Plan
 
 ### Automated Tests (after each phase)
+
 1. **Phase 1**: `psql -c "SELECT COUNT(*) FROM marine_data"` — must be > 0
 2. **Phase 2**: `pytest services/api/tests/test_rag.py` — 20 query types must all return valid responses
 3. **Phase 3**: `python -m services.api.src.server.observe_test` — pipeline trace JSON must have all 14 fields
@@ -398,6 +409,7 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 5. **Phase 5**: POST `/feedback` endpoint must return 200 and persist to DB
 
 ### Manual Tests
+
 - Navigate to `http://localhost:3000`, ask 10 test queries from the table above, verify:
   - SQL path gives table results + chart
   - Semantic path gives cited paragraphs
@@ -407,6 +419,7 @@ Terminal output uses `structlog` with color-coded levels per pipeline stage.
 
 > [!IMPORTANT]
 > The implementation will **reuse existing code** from all branches rather than rewriting from scratch:
+>
 > - Keep `serve.py` FastAPI structure (extend it)
 > - Keep all chart components from `FINAL_MAIN` (merging to web/)
 > - Keep geo utils from `main` branch

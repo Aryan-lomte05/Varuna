@@ -1,15 +1,15 @@
 """
-FloatChat AI — Hybrid Retriever (BM25 + Qdrant Vector Search + Cross-Encoder Reranking)
+FloatChat AI â€” Hybrid Retriever (BM25 + Qdrant Vector Search + Cross-Encoder Reranking)
 
 WHY Hybrid retrieval?
   BM25 alone: great for exact keyword matches ("Arabian Sea", "platform 1902367")
   Vector search alone: great for semantic meaning ("upwelling indicators", "warm anomaly")
-  BM25 + Vector together = best of both worlds — neither misses what the other finds.
+  BM25 + Vector together = best of both worlds â€” neither misses what the other finds.
 
 WHY Cross-encoder reranking?
   BM25 and vector scores are not comparable (different scales). A cross-encoder
   takes the query AND a candidate chunk AS A PAIR and scores actual relevance.
-  It's slower (O(k) model calls) but applied to only the top 20 candidates → fast enough.
+  It's slower (O(k) model calls) but applied to only the top 20 candidates â†’ fast enough.
 
 WHY Qdrant instead of Chroma?
   Chroma is great for prototyping. Qdrant:
@@ -33,9 +33,9 @@ from qdrant_client.models import (  # type: ignore
 )
 
 from src.config import settings  # type: ignore
-from src.models.ollama_client import embed  # type: ignore
+from src.llm.ollama_client import embed  # type: ignore
 
-# ── Qdrant client (lazy singleton) ────────────────────────────────────────────
+# â”€â”€ Qdrant client (lazy singleton) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _qdrant: Optional[QdrantClient] = None
 
 
@@ -50,12 +50,12 @@ def get_qdrant() -> QdrantClient:
     return _qdrant
 
 
-# ── In-memory BM25 corpus (refreshed on startup + ingestion) ─────────────────
+# â”€â”€ In-memory BM25 corpus (refreshed on startup + ingestion) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class BM25Index:
     """
     Maintains a BM25 index over all text chunks in the Qdrant collection.
     Rebuilt when the retriever is initialized or when new data is ingested.
-    This is kept in-process memory (fast) — NOT persisted to disk.
+    This is kept in-process memory (fast) â€” NOT persisted to disk.
     """
     def __init__(self):
         self.corpus: List[str] = []
@@ -96,7 +96,7 @@ class BM25Index:
         return results
 
 
-# ── Main retriever ────────────────────────────────────────────────────────────
+# â”€â”€ Main retriever â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class HybridRetriever:
     """
     Production hybrid retriever:
@@ -146,10 +146,10 @@ class HybridRetriever:
         top_k = top_k or settings.rag_top_k
         candidate_k = min(top_k * 3, 30)
 
-        # ── Step 1: BM25 candidates ──────────────────────────────────────────
+        # â”€â”€ Step 1: BM25 candidates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         bm25_results = self.bm25.search(query, top_k=candidate_k)
 
-        # ── Step 2: Vector search ────────────────────────────────────────────
+        # â”€â”€ Step 2: Vector search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         query_vec = await embed([query])
         qvec = query_vec[0]
 
@@ -170,10 +170,10 @@ class HybridRetriever:
             with_payload=True,
         )
 
-        # ── Step 3: Reciprocal Rank Fusion (RRF) ────────────────────────────
+        # â”€â”€ Step 3: Reciprocal Rank Fusion (RRF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # RRF merges ranked lists without needing score normalization.
-        # score(d) = Σ 1/(k + rank_i(d)) where k=60 (standard constant)
-        # WHY RRF? Because BM25 scores (0→∞) and cosine similarity (0→1) are
+        # score(d) = Î£ 1/(k + rank_i(d)) where k=60 (standard constant)
+        # WHY RRF? Because BM25 scores (0â†’âˆž) and cosine similarity (0â†’1) are
         # incompatible scales. RRF only uses rank position, not raw score.
 
         RRF_K = 60
@@ -204,7 +204,7 @@ class HybridRetriever:
         )[:candidate_k]  # type: ignore
 
 
-        # ── Step 4: LLM-based reranking ──────────────────────────────────
+        # â”€â”€ Step 4: LLM-based reranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # WHY rerank? Because embedding similarity is asymmetric and often
         # misses complex semantic relationships.
         # we pick the top candidates from RRF and pass them to the LLM.
@@ -213,7 +213,7 @@ class HybridRetriever:
 
         return reranked
 
-# ── Collection management ─────────────────────────────────────────────────────
+# â”€â”€ Collection management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def ensure_collection(vector_size: int = 768):
     """Create Qdrant collection if it doesn't exist."""
     client = get_qdrant()
@@ -252,7 +252,7 @@ async def upsert_chunks(chunks: List[Dict[str, Any]]):
     )
 
 
-# ── Singleton retriever ───────────────────────────────────────────────────────
+# â”€â”€ Singleton retriever â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _retriever: Optional[HybridRetriever] = None
 
 

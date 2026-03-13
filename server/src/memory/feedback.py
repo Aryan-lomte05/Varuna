@@ -1,5 +1,5 @@
 """
-FloatChat AI — Feedback & Reinforcement Memory
+FloatChat AI â€” Feedback & Reinforcement Memory
 
 Handles the persistence and analysis of user feedback (ratings/corrections).
 This data is used to:
@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
-from src.db.postgres import store_feedback as db_store_feedback  # type: ignore
+from src.database.postgres import store_feedback as db_store_feedback  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ async def process_user_feedback(
 
 def get_feedback_stats() -> Dict[str, Any]:
     """Retrieve summary of system performance based on feedback."""
-    from src.db.postgres import run_sql  # type: ignore
+    from src.database.postgres import run_sql  # type: ignore
     try:
         stats = run_sql(
             "SELECT AVG(rating) as avg_rating, COUNT(*) as total_count FROM public.query_feedback"

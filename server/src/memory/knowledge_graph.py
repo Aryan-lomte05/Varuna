@@ -1,5 +1,5 @@
 """
-FloatChat AI — Knowledge Graph Memory
+FloatChat AI â€” Knowledge Graph Memory
 
 WHY a knowledge graph?
   SQL is great for precision queries. But relationships like:
@@ -7,7 +7,7 @@ WHY a knowledge graph?
      which correlates with high doxy in June-September"
   ... are hard to express in flat SQL rows.
 
-  A graph naturally represents: float → region → variable → seasonal_pattern.
+  A graph naturally represents: float â†’ region â†’ variable â†’ seasonal_pattern.
   We use NetworkX (in-process, no extra DB) for the KG because:
   - Our graph is small (~1000 nodes max for Indian Ocean ARGO)
   - NetworkX has rich traversal algorithms (BFS, shortest path, centrality)
@@ -25,9 +25,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx  # type: ignore
 
-from src.db.postgres import run_sql  # type: ignore
+from src.database.postgres import run_sql  # type: ignore
 
-# ── In-process KG ─────────────────────────────────────────────────────────────
+# â”€â”€ In-process KG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _KG: Optional[nx.DiGraph] = None
 
 
@@ -52,7 +52,7 @@ def _seed_default_graph(G: nx.DiGraph):
     for var in ["temp", "psal", "doxy", "chla", "nitrate", "ph", "bbp700"]:
         G.add_node(var, type="variable")
 
-    # Region → Variable relationships (key science)
+    # Region â†’ Variable relationships (key science)
     G.add_edge("arabian_sea", "doxy",    rel="low_oxygen_zone",  weight=0.9)
     G.add_edge("arabian_sea", "temp",    rel="seasonal_sst",     weight=0.8)
     G.add_edge("arabian_sea", "chla",    rel="upwelling_bloom",  weight=0.7)

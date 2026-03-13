@@ -1,8 +1,8 @@
 """
-FloatChat AI — Main FastAPI Application
+FloatChat AI â€” Main FastAPI Application
 
 WHY FastAPI?
-  - Native async (ASGI) — no blocking I/O on Postgres/Redis/Ollama calls
+  - Native async (ASGI) â€” no blocking I/O on Postgres/Redis/Ollama calls
   - Pydantic validation = free request/response type safety
   - Auto-generated OpenAPI docs at /docs
   - WebSocket support built-in (for streaming answers)
@@ -29,41 +29,41 @@ from src.config import settings
 from src.rag.retriever import get_retriever, ensure_collection
 from src.memory.knowledge_graph import rebuild_kg_from_db
 from src.observability.logger import console
-from src.db.qdrant import seed_argo_knowledge
+from src.database.qdrant import seed_argo_knowledge
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
-    console.rule("[bold cyan]🌊 FloatChat AI — Starting Up[/bold cyan]")
+    console.rule("[bold cyan]ðŸŒŠ FloatChat AI â€” Starting Up[/bold cyan]")
 
     # 1) Qdrant collection
-    console.print("  [green]▸[/green] Ensuring Qdrant collection...")
+    console.print("  [green]â–¸[/green] Ensuring Qdrant collection...")
     await ensure_collection(vector_size=768)
 
     # 2) Seed knowledge base if empty
-    console.print("  [green]▸[/green] Seeding ARGO knowledge base...")
+    console.print("  [green]â–¸[/green] Seeding ARGO knowledge base...")
     await seed_argo_knowledge()
 
     # 3) BM25 index from Qdrant
-    console.print("  [green]▸[/green] Building BM25 index...")
+    console.print("  [green]â–¸[/green] Building BM25 index...")
     await get_retriever()
 
     # 4) Knowledge Graph
-    console.print("  [green]▸[/green] Rebuilding Knowledge Graph...")
+    console.print("  [green]â–¸[/green] Rebuilding Knowledge Graph...")
     rebuild_kg_from_db()
 
-    console.rule("[bold green]🌊 FloatChat AI — Ready[/bold green]")
+    console.rule("[bold green]ðŸŒŠ FloatChat AI â€” Ready[/bold green]")
     yield
 
-    console.rule("[dim]FloatChat AI — Shutting Down[/dim]")
+    console.rule("[dim]FloatChat AI â€” Shutting Down[/dim]")
 
 
 app = FastAPI(
-    title="FloatChat AI 🌊",
+    title="FloatChat AI ðŸŒŠ",
     description=(
         "AI-powered ocean data system for INCOIS marine scientists. "
-        "Natural language → oceanographic intelligence."
+        "Natural language â†’ oceanographic intelligence."
     ),
     version="2.0.0",
     default_response_class=ORJSONResponse,
@@ -72,7 +72,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ── CORS ─────────────────────────────────────────────────────────────────────
+# â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
@@ -81,10 +81,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── GZip for large responses ───────────────────────────────────────────────
+# â”€â”€ GZip for large responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# ── Register routes ────────────────────────────────────────────────────────
+# â”€â”€ Register routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 from src.server.routes import router as api_router
 from src.server.ws import router as ws_router
 
@@ -94,7 +94,7 @@ app.include_router(ws_router)
 
 @app.get("/health")
 async def health():
-    from src.models.ollama_client import health_check
+    from src.llm.ollama_client import health_check
     ollama = await health_check()
     return {
         "ok": True,

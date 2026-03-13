@@ -1,9 +1,9 @@
 """
-FloatChat AI — Complete SQL RAG Chain
+FloatChat AI â€” Complete SQL RAG Chain
 
 This is the primary data query pipeline:
   1. Query rewriting + intent fast-path
-  2. NL → SQL via Qwen2.5:14b (Ollama)
+  2. NL â†’ SQL via Qwen2.5:14b (Ollama)
   3. SQL sanitization (SELECT-only enforced)
   4. Execute on PostgreSQL (connection pool)
   5. Build visualization specs
@@ -25,15 +25,15 @@ from typing import Any, Dict, List, Optional
 from itertools import islice
 
 from src.config import settings  # type: ignore
-from src.db.postgres import run_sql, nearest_floats  # type: ignore
-from src.models.ollama_client import generate_sql, narrate_results  # type: ignore
+from src.database.postgres import run_sql, nearest_floats  # type: ignore
+from src.llm.ollama_client import generate_sql, narrate_results  # type: ignore
 from src.utils.sql_extract import extract_sql  # type: ignore
 from src.utils.viz_builder import build_viz_specs  # type: ignore
 from src.utils.geo import city_lookup, infer_coast_from_name  # type: ignore
 from src.observability.logger import PipelineTrace  # type: ignore
 
 
-# ── Relay widening (retry with relaxed constraints) ───────────────────────────
+# â”€â”€ Relay widening (retry with relaxed constraints) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _relax_sql(sql: str) -> str:
     """Widen time/tolerance windows on retry."""
     import re
@@ -50,7 +50,7 @@ def _relax_sql(sql: str) -> str:
     return out
 
 
-# ── Markdown table renderer ───────────────────────────────────────────────────
+# â”€â”€ Markdown table renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _mk_table(rows: List[Dict[str, Any]], max_rows: int = 10) -> str:
     if not rows:
         return "_No rows returned._"
@@ -70,7 +70,7 @@ def _mk_table(rows: List[Dict[str, Any]], max_rows: int = 10) -> str:
             vals.append("".join(islice(str(v), 30)))
         body.append("|" + "|".join(vals) + "|")
     if len(rows) > max_rows:
-        body.append(f"_…and {len(rows) - max_rows} more rows._")
+        body.append(f"_â€¦and {len(rows) - max_rows} more rows._")
     return hdr + "\n" + "\n".join(body)
 
 
@@ -95,7 +95,7 @@ async def answer(
     """
     limit = limit or settings.sql_max_rows
 
-    # ── Retry/relax path ──────────────────────────────────────────────────────
+    # â”€â”€ Retry/relax path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if prior_sql:
         sql = extract_sql(prior_sql) or prior_sql.strip()
         sql_relaxed = _relax_sql(sql)
@@ -108,7 +108,7 @@ async def answer(
         return {"answer_markdown": md, "sql": sql_relaxed, "rows": rows,
                 "viz_specs": viz, "float_ids": _float_ids(rows)}
 
-    # ── Step 1: Generate SQL ──────────────────────────────────────────────────
+    # â”€â”€ Step 1: Generate SQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if trace:
         trace.log("SQL_GEN", f"Generating SQL via {settings.ollama_sql_model}")
     raw_sql = await generate_sql(question, history=history_str)
@@ -121,19 +121,19 @@ async def answer(
     if trace:
         trace.log("SQL_GEN", f"Extracted SQL: {''.join(islice(sql, 80))}...", sql=sql)
 
-    # ── Step 2: Execute ───────────────────────────────────────────────────────
+    # â”€â”€ Step 2: Execute â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if trace:
         trace.log("SQL_EXEC", "Executing on PostgreSQL")
     rows = run_sql(sql, limit=limit)
     if trace:
         trace.log("SQL_EXEC", f"{len(rows)} rows returned", row_count=len(rows))
 
-    # ── Step 3: Viz specs ─────────────────────────────────────────────────────
+    # â”€â”€ Step 3: Viz specs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     viz = build_viz_specs(rows, question)
     if trace:
         trace.log("RESPONSE", f"Chart type: {viz.get('chart_type')} | Map points: {len((viz.get('map_data') or {}).get('points', []))}")
 
-    # ── Step 4: Narrate ───────────────────────────────────────────────────────
+    # â”€â”€ Step 4: Narrate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if trace:
         trace.log("NARRATE", f"Narrating with {settings.ollama_narrate_model}")
     prose = await narrate_results(question, sql, _preview_json(rows))
@@ -161,7 +161,7 @@ def _float_ids(rows: List[Dict[str, Any]]) -> List[str]:
 
 def _format_response(prose: str, sql: str, rows: List[Dict[str, Any]]) -> str:
     return (
-        f"### 🌊 Summary\n{prose}\n\n"
+        f"### ðŸŒŠ Summary\n{prose}\n\n"
         f"<details>\n<summary>SQL Query Used</summary>\n\n```sql\n{sql}\n```\n</details>\n\n"
         f"### Data Preview\n{_mk_table(rows)}"
     )

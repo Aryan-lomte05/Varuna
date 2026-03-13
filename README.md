@@ -1,6 +1,7 @@
 # 🌊 FloatChat AI — Global Oceanic Intelligence (Final Edition)
 
 ## Quick Start (Windows friendly)
+
 1. Backend
    - cd apps/backend
    - python -m venv .venv && . .venv/Scripts/activate
@@ -19,25 +20,30 @@
    - Ask: "Show me psal vs pres near the equator in March 2023 including temp and coords"
 
 ## Structure
+
 - apps/backend: FastAPI, LoRA LLaMA → SQL, RAG (Chroma), Supabase Postgres.
 - apps/web: Next.js App Router UI with chat, charts (Plotly), and map (Leaflet).
 
 # FLOATCHATAI 🌊
-Your ocean-data copilot: ask natural language, get **Postgres SQL** + results + tidy summaries.  
-- Ocean-themed greetings, small talk, time, quick math  
-- Year-partitioned table (`public.marine_data_*`) with a parent `public.marine_data`  
-- Coast-aware “nearest float” (e.g., “near Mumbai” → west coast)  
+
+Your ocean-data copilot: ask natural language, get **Postgres SQL** + results + tidy summaries.
+
+- Ocean-themed greetings, small talk, time, quick math
+- Year-partitioned table (`public.marine_data_*`) with a parent `public.marine_data`
+- Coast-aware “nearest float” (e.g., “near Mumbai” → west coast)
 - Finetuned LoRA for robust SQL generation (TinyLlama base)
 
 ## Quickstart
 
 ### 0) Prereqs
+
 - Python 3.11+
 - (Optional) Docker (for local Postgres)
 - Git, curl/Postman/VS Code
 
 ### 1) Clone
-```bash
+
+````bash
 git clone https://github.com/<your-org>/floatchatai.git
 cd floatchatai/apps/backend
 2) Virtualenv & deps
@@ -298,3 +304,4 @@ jobs:
       - run: . .venv/bin/activate && pip install -r requirements.txt
       - name: Lint import
         run: . .venv/bin/activate && python -c "import fastapi, sqlalchemy, transformers; print('ok'
+````

@@ -1,5 +1,5 @@
 """
-FloatChat AI — Multi-Hop Query Decomposer
+FloatChat AI â€” Multi-Hop Query Decomposer
 
 WHY multi-hop?
   "Compare salinity in Arabian Sea vs Bay of Bengal for the last 6 months
@@ -8,17 +8,17 @@ WHY multi-hop?
     2. Salinity stats in Bay of Bengal (last 6 months)
     3. Nearest floats to Mumbai
 
-  A single LLM SQL call can't handle this properly — it either ignores parts
+  A single LLM SQL call can't handle this properly â€” it either ignores parts
   or generates a monstrous JOIN that returns garbage.
 
-  The decomposer splits → executes each → merges results into one response.
+  The decomposer splits â†’ executes each â†’ merges results into one response.
 """
 from __future__ import annotations
 import re
 from typing import List, Tuple, Dict, Any
 from itertools import islice
 
-from src.models.ollama_client import decompose_query  # type: ignore
+from src.llm.ollama_client import decompose_query  # type: ignore
 from src.rag.query_rewriter import detect_intent_fast  # type: ignore
 
 

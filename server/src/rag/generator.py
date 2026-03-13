@@ -1,8 +1,8 @@
 """
-FloatChat AI — Grounded Answer Generator
+FloatChat AI â€” Grounded Answer Generator
 
 WHY "grounded"?
-  Without grounding the LLM answers from its training data — which may be
+  Without grounding the LLM answers from its training data â€” which may be
   outdated, wrong, or hallucinated. Grounded generation means: the LLM is
   ONLY allowed to use the context we provide (retrieved chunks + SQL results).
 
@@ -16,16 +16,16 @@ from __future__ import annotations
 from typing import Any, AsyncIterator, Dict, List, Optional
 from itertools import islice
 
-from src.models.ollama_client import stream_answer, narrate_results  # type: ignore
+from src.llm.ollama_client import stream_answer, narrate_results  # type: ignore
 from src.rag.context_assembler import assemble_context  # type: ignore
 
 
-_GROUNDED_SYSTEM = """You are FloatChat AI — a world-class ocean data assistant built for INCOIS marine scientists.
+_GROUNDED_SYSTEM = """You are FloatChat AI â€” a world-class ocean data assistant built for INCOIS marine scientists.
 
 STRICT RULES:
 1. Answer ONLY using the provided context and SQL results below.
-2. If the context does not contain enough information, say "The available data doesn't cover this — try rephrasing or narrowing your query."
-3. Always include: key values with units (°C, PSU, µmol/kg, mg/m³), time window, ocean region.
+2. If the context does not contain enough information, say "The available data doesn't cover this â€” try rephrasing or narrowing your query."
+3. Always include: key values with units (Â°C, PSU, Âµmol/kg, mg/mÂ³), time window, ocean region.
 4. When citing data points, cite the float ID and timestamp if available.
 5. Format response in clean markdown with headers where appropriate.
 6. Do NOT fabricate data values. Do NOT say "typically" or "generally" without citing context.
@@ -97,7 +97,7 @@ async def generate_semantic_answer(
             "Try asking about specific ocean variables, regions, or ARGO float data."
         )
 
-    from src.models.ollama_client import _chat  # type: ignore
+    from src.llm.ollama_client import _chat  # type: ignore
     from src.config import settings  # type: ignore
 
     messages = [

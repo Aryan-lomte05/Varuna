@@ -1,10 +1,10 @@
 """
-FloatChat AI — WebSocket Server for Streaming Answers
+FloatChat AI â€” WebSocket Server for Streaming Answers
 
 WHY WebSocket for streaming?
   HTTP request-response makes you wait for the entire LLM answer before
   anything arrives. With WebSocket + streaming, tokens arrive word-by-word
-  — the user sees the answer forming in real-time (like ChatGPT).
+  â€” the user sees the answer forming in real-time (like ChatGPT).
 
   WebSocket protocol:
   - Client sends: {"question": "...", "session": "..."}
@@ -28,11 +28,11 @@ from src.chains import sql_rag_chain, rag_chain
 from src.rag.query_rewriter import detect_intent_fast
 from src.rag.decomposer import maybe_decompose, merge_multi_hop_answers
 from src.memory.conversation import append_message, build_history_prompt
-from src.models.ollama_client import rewrite_query, stream_answer
+from src.llm.ollama_client import rewrite_query, stream_answer
 from src.observability.logger import pipeline_span
 from src.observability.pipeline_log import store_trace
 from src.server.routes import _smalltalk, _extract_latlon, _extract_city, _extract_days
-from src.db.postgres import nearest_floats
+from src.database.postgres import nearest_floats
 from src.utils.geo import city_lookup
 from src.utils.viz_builder import build_viz_specs
 
@@ -66,14 +66,14 @@ async def ws_chat(websocket: WebSocket):
             append_message(session, "user", q)
 
             with pipeline_span(trace_id, q) as trace:
-                # ── Smalltalk fast path ───────────────────────────────────────
+                # â”€â”€ Smalltalk fast path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 st = _smalltalk(q)
                 if st:
                     await _send(websocket, "token", st)
                     await _send(websocket, "done", {"trace_id": trace_id, "intent": "SMALLTALK"})
                     continue
 
-                # ── Intent detection ──────────────────────────────────────────
+                # â”€â”€ Intent detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 intent = detect_intent_fast(q)
                 if not intent:
                     q_rw, intent = await rewrite_query(q, history)
@@ -81,12 +81,12 @@ async def ws_chat(websocket: WebSocket):
                     q = q_rw
                 await _send(websocket, "intent", intent)
 
-                # ── Pipeline trace step events to frontend ────────────────────
+                # â”€â”€ Pipeline trace step events to frontend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 await _send(websocket, "pipeline_step", {
                     "stage": "INTENT", "message": f"Intent: {intent}"
                 })
 
-                # ── SQL / Data path with streaming ────────────────────────────
+                # â”€â”€ SQL / Data path with streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if intent in ("SQL_DATA", "NEAREST_FLOAT", "MULTI_HOP") or not intent:
                     try:
                         # Run SQL chain (non-streaming for rows), then stream narration
@@ -123,7 +123,7 @@ async def ws_chat(websocket: WebSocket):
                     except Exception as e:
                         await _send(websocket, "error", str(e))
 
-                # ── Semantic path with streaming ──────────────────────────────
+                # â”€â”€ Semantic path with streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 else:
                     try:
                         from src.rag.retriever import get_retriever

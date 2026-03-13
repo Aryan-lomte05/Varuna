@@ -15,8 +15,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from src.chains.sql_rag_chain import answer as sql_answer  # your LLM/RAG SQL router
-from src.db.postgres import nearest_floats  # deterministic nearest-floats lookup
-from src.utils.geo import city_lookup, infer_coast_from_name  # city → (lat,lon,coast)
+from src.database.postgres import nearest_floats  # deterministic nearest-floats lookup
+from src.utils.geo import city_lookup, infer_coast_from_name  # city â†’ (lat,lon,coast)
 
 # -------------------------------
 # Env switches
@@ -32,7 +32,7 @@ FORCE_SQL_DEFAULT = os.getenv("FLOATCHAT_FORCE_SQL_DEFAULT", "false").lower() ==
 # App + CORS
 # -------------------------------
 app = FastAPI(
-    title="FLOATCHATAI 🌊",
+    title="FLOATCHATAI ðŸŒŠ",
     description="Ocean-data SQL RAG API (tiny-friendly, English output)",
     version="1.2.1",
     default_response_class=ORJSONResponse,
@@ -74,7 +74,7 @@ class ChatOut(BaseModel):
 PLAY_HTML = """
 <!doctype html><html><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FloatchatAI – /play</title>
+<title>FloatchatAI â€“ /play</title>
 <style>
 body{font-family:system-ui,ui-sans-serif,Segoe UI,Helvetica,Arial,sans-serif;margin:2rem;max-width:980px}
 textarea{width:100%;height:140px}pre{background:#0b1220;color:#d6e1ff;padding:12px;border-radius:8px;white-space:pre-wrap}
@@ -82,25 +82,25 @@ kbd{padding:.15rem .4rem;border:1px solid #ccc;border-bottom-width:3px;border-ra
 small{color:#4a5568}
 </style>
 </head><body>
-<h1>FloatchatAI – /play</h1>
-<p><b>Backend:</b> <code>http://127.0.0.1:8001/chat</code> · <b>Vite dev (optional):</b> <code>http://127.0.0.1:5173</code></p>
+<h1>FloatchatAI â€“ /play</h1>
+<p><b>Backend:</b> <code>http://127.0.0.1:8001/chat</code> Â· <b>Vite dev (optional):</b> <code>http://127.0.0.1:5173</code></p>
 <p><b>Examples:</b></p>
 <ul>
   <li>Top 10 floats by average doxy in the NE Arabian Sea over the past 45 days.</li>
   <li>Show the max of temp near Kerala over the past 100 days. (windowed stat)</li>
-  <li>Give me a depth profile at lat 19.1 and lon 72.85 at time 2025-07-03 10:05:00 where temperature is 28.5 °C</li>
+  <li>Give me a depth profile at lat 19.1 and lon 72.85 at time 2025-07-03 10:05:00 where temperature is 28.5 Â°C</li>
   <li>Show the min of temp in the Arabian Sea over the past 30 days.</li>
 </ul>
 <textarea id="q" placeholder="Ask an ocean question..."></textarea>
 <div style="margin:.5rem 0;display:flex;gap:.5rem;align-items:center">
   <label><input id="force" type="checkbox"/> force_sql</label>
-  <button onclick="go()">Ask</button> <small>Tip: <kbd>Enter</kbd> submits · <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</small>
+  <button onclick="go()">Ask</button> <small>Tip: <kbd>Enter</kbd> submits Â· <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</small>
 </div>
 <div id="out"></div>
 <script>
 async function go(){
   const out = document.getElementById('out');
-  out.innerHTML = '⏳ querying...';
+  out.innerHTML = 'â³ querying...';
   const r = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
               body:JSON.stringify({question:document.getElementById('q').value, force_sql: document.getElementById('force').checked})});
   const j = await r.json();
@@ -128,11 +128,11 @@ def play_page():
 MEMORY: Dict[str, deque] = defaultdict(lambda: deque(maxlen=20))
 LAST_SQL: Dict[str, str] = {}
 LAST_ROWS: Dict[str, List[dict]] = {}
-OCEAN_GREETING = "🌊 ahoy! "
+OCEAN_GREETING = "ðŸŒŠ ahoy! "
 
 TIME_FULL = re.compile(r"^\s*(?:what(?:'s| is)\s+the\s+time\??|current\s+time\??|time\??)\s*$", re.I)
 HELLO_FULL = re.compile(r"^\s*(?:hi|hello|hey|namaste|yo)\s*$", re.I)
-MATH_FULL  = re.compile(r"^\s*[-+/*()\d.\s%^\u221a]+\s*$")  # allow √
+MATH_FULL  = re.compile(r"^\s*[-+/*()\d.\s%^\u221a]+\s*$")  # allow âˆš
 
 def _safe_eval(expr: str) -> Optional[float]:
     try:
@@ -147,7 +147,7 @@ def smalltalk_or_tools(text: str) -> Optional[str]:
     if MATH_FULL.fullmatch(t) and any(op in t for op in "+-*/%^"):
         val = _safe_eval(t)
         if val is not None:
-            return f"{OCEAN_GREETING}quick calculation:\n\n**Expression:** `{t}` → **{val}**"
+            return f"{OCEAN_GREETING}quick calculation:\n\n**Expression:** `{t}` â†’ **{val}**"
     if TIME_FULL.fullmatch(t):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return f"{OCEAN_GREETING}current time is **{now}**."
@@ -156,7 +156,7 @@ def smalltalk_or_tools(text: str) -> Optional[str]:
     return None
 
 # -------------------------------
-# Near intent (city / “near me”) + window parsing
+# Near intent (city / â€œnear meâ€) + window parsing
 # -------------------------------
 CITY_TOKENS = (
     # coastal India + basins (+ a few common misspellings)
@@ -298,7 +298,7 @@ def handle_near_query(user_text: str, user_latlon: Optional[Tuple[float,float]]=
     if city:
         md_lines.append(
             f"- Anchor: **{city.title()}** ({anchor[0]:.4f}, {anchor[1]:.4f})"
-            + (f"  · coast: **{prefer_coast}**" if prefer_coast else "")
+            + (f"  Â· coast: **{prefer_coast}**" if prefer_coast else "")
         )
     else:
         md_lines.append(f"- Anchor: **({anchor[0]:.4f}, {anchor[1]:.4f})**")
@@ -309,7 +309,7 @@ def handle_near_query(user_text: str, user_latlon: Optional[Tuple[float,float]]=
     md_lines.append("")
 
     if db_error:
-        md_lines.append("_Database is not reachable right now, so I couldn’t fetch nearby float rows._")
+        md_lines.append("_Database is not reachable right now, so I couldnâ€™t fetch nearby float rows._")
         md_lines.append(f"_Error:_ `{db_error}`")
         return {"markdown": "\n".join([p for p in md_lines if p]), "rows": []}
 
@@ -317,7 +317,7 @@ def handle_near_query(user_text: str, user_latlon: Optional[Tuple[float,float]]=
     return {"markdown": "\n".join([p for p in md_lines if p]), "rows": rows}
 
 # -------------------------------
-# Quick intent check — when to route to SQL
+# Quick intent check â€” when to route to SQL
 # -------------------------------
 DATA_TOKENS = (
     "buoy","float","platform","platform_number",
@@ -341,14 +341,14 @@ def should_route_to_sql(q: str, force_sql: bool) -> bool:
 def _relax_sql(sql: str) -> str:
     """Widen time/tolerance if user asks 'retry' after empty results."""
     out = sql
-    # widen minute windows (e.g., 60 → up to 240)
+    # widen minute windows (e.g., 60 â†’ up to 240)
     out = re.sub(r"INTERVAL\s+'(\d+)\s+minutes'", lambda m: f"INTERVAL '{min(int(m.group(1))*4, 720)} minutes'", out, flags=re.I)
-    # widen day windows (NOW()-INTERVAL 'N days' → *3 up to ~10y)
+    # widen day windows (NOW()-INTERVAL 'N days' â†’ *3 up to ~10y)
     def inc_days(m):
         n = int(m.group(1))
         return f"NOW() - INTERVAL '{min(n*3, 3650)} days'"
     out = re.sub(r"NOW\(\)\s*-\s*INTERVAL\s+'(\d+)\s+days'", inc_days, out, flags=re.I)
-    # widen ABS(temp - X) < tol (0.02 → ×5 with floor 0.1)
+    # widen ABS(temp - X) < tol (0.02 â†’ Ã—5 with floor 0.1)
     out = re.sub(r"ABS\(\s*temp\s*-\s*([0-9]+(?:\.[0-9]+)?)\s*\)\s*<\s*([0-9]+(?:\.[0-9]+)?)",
                  lambda m: f"ABS(temp - {m.group(1)}) < {max(float(m.group(2))*5, 0.1)}", out, flags=re.I)
     return out
@@ -375,7 +375,7 @@ def chat(inp: ChatIn):
         try:
             result = sql_answer("__RE-RUN__", prior_sql=relaxed)
             md = result.get("answer_markdown") or ""
-            if md and not md.lstrip().startswith("🌊"):
+            if md and not md.lstrip().startswith("ðŸŒŠ"):
                 md = f"{OCEAN_GREETING}{md}"
             LAST_SQL[inp.session] = result.get("sql") or relaxed
             LAST_ROWS[inp.session] = result.get("rows") or []
@@ -404,7 +404,7 @@ def chat(inp: ChatIn):
                             "id": str(r.get("platform_number")),
                             "lat": float(r["latitude"]),
                             "lon": float(r["longitude"]),
-                            "label": f"{r.get('platform_number')} · {r.get('time')}"
+                            "label": f"{r.get('platform_number')} Â· {r.get('time')}"
                         }
                         for r in rows
                         if r.get("latitude") is not None and r.get("longitude") is not None
@@ -428,7 +428,7 @@ def chat(inp: ChatIn):
 
     # 3) Data intent?
     if not should_route_to_sql(q, force_sql):
-        msg = (f"{OCEAN_GREETING}that doesn’t look like an ocean-data question. "
+        msg = (f"{OCEAN_GREETING}that doesnâ€™t look like an ocean-data question. "
                f"Try salinity/oxygen/chlorophyll trends, float profiles, or regional summaries.")
         MEMORY[inp.session].append({"role": "assistant", "content": msg})
         LAST_SQL[inp.session] = ""
@@ -439,7 +439,7 @@ def chat(inp: ChatIn):
     try:
         result: Dict[str, Any] = sql_answer(q, history=list(MEMORY[inp.session])[-4:])
         md = result.get("answer_markdown") or ""
-        if md and not md.lstrip().startswith("🌊"):
+        if md and not md.lstrip().startswith("ðŸŒŠ"):
             md = f"{OCEAN_GREETING}{md}"
 
         MEMORY[inp.session].append({"role": "assistant", "content": md})

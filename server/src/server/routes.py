@@ -1,14 +1,14 @@
 """
-FloatChat AI — API Routes
+FloatChat AI â€” API Routes
 
 All HTTP endpoints. Each route orchestrates the full pipeline:
-  POST /api/v1/chat       — main Q&A endpoint (non-streaming)
-  POST /api/v1/feedback   — user rates/corrects an answer
-  GET  /api/v1/floats     — list floats (dataset explorer)
-  GET  /api/v1/trajectory/{id} — float trajectory for map
-  GET  /api/v1/profile/{id}    — depth profile for a float/cycle
-  GET  /api/v1/debug/{trace_id} — pipeline trace debugger
-  GET  /api/v1/stats       — regional dashboard stats
+  POST /api/v1/chat       â€” main Q&A endpoint (non-streaming)
+  POST /api/v1/feedback   â€” user rates/corrects an answer
+  GET  /api/v1/floats     â€” list floats (dataset explorer)
+  GET  /api/v1/trajectory/{id} â€” float trajectory for map
+  GET  /api/v1/profile/{id}    â€” depth profile for a float/cycle
+  GET  /api/v1/debug/{trace_id} â€” pipeline trace debugger
+  GET  /api/v1/stats       â€” regional dashboard stats
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from src.rag.decomposer import maybe_decompose, merge_multi_hop_answers  # type:
 from src.memory.conversation import append_message, build_history_prompt  # type: ignore
 from src.memory.knowledge_graph import get_related_context  # type: ignore
 from src.memory.personalization import get_user_preferences  # type: ignore
-from src.db.postgres import (  # type: ignore
+from src.database.postgres import (  # type: ignore
     run_sql, nearest_floats, float_trajectory,
     depth_profile, regional_stats, store_feedback,
 )
@@ -38,16 +38,16 @@ from src.observability.pipeline_log import store_trace, get_trace  # type: ignor
 
 router = APIRouter()
 
-# ── In-process trace store (most recent 500 per session) ─────────────────────
+# â”€â”€ In-process trace store (most recent 500 per session) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _LAST_SQL: Dict[str, str] = {}
 _LAST_ROWS: Dict[str, list] = {}
 
-OCEAN_GREETING = "🌊 "
+OCEAN_GREETING = "ðŸŒŠ "
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # Request / Response models
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 class ChatIn(BaseModel):
     question: str
     session: str = "default"
@@ -78,18 +78,18 @@ class FeedbackIn(BaseModel):
     trace_id: Optional[str] = None
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # Helpers
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 
 # Math / smalltalk patterns
-_MATH_RE  = re.compile(r"^[\d\s\+\-\*\/\%\^\(\)\.√]+$")
+_MATH_RE  = re.compile(r"^[\d\s\+\-\*\/\%\^\(\)\.âˆš]+$")
 _TIME_RE  = re.compile(r"^\s*(time|current time|what.?s the time)\??\s*$", re.I)
 _HELLO_RE = re.compile(r"^\s*(hi|hello|hey|namaste|yo|greetings)\s*$", re.I)
 
 def _smalltalk(q: str) -> Optional[str]:
     if _HELLO_RE.match(q):
-        return (f"{OCEAN_GREETING}Ahoy! I'm FloatChat AI — your ocean data copilot.\n"
+        return (f"{OCEAN_GREETING}Ahoy! I'm FloatChat AI â€” your ocean data copilot.\n"
                 f"Ask me about salinity, temperature, oxygen, chlorophyll, float trajectories, "
                 f"depth profiles, or any ocean phenomenon.")
     if _TIME_RE.match(q):
@@ -133,9 +133,9 @@ def _extract_days(text: str) -> int:
     return n if unit == "day" else n * 30 if unit == "month" else n * 365
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # POST /chat
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.post("/chat", response_model=ChatOut)
 async def chat(inp: ChatIn):
     q = inp.question.strip()
@@ -147,12 +147,12 @@ async def chat(inp: ChatIn):
     history  = build_history_prompt(session, last_n=4)
 
     with pipeline_span(trace_id, q) as trace:
-        # ── Fetch User Preferences ───────────────────────────────────────────
+        # â”€â”€ Fetch User Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         prefs = get_user_preferences(session)
         if prefs and trace:
             trace.log("USER_PREFS", f"Loaded preferences for {session}", prefs=prefs)
 
-        # ── 0) Retry trigger ─────────────────────────────────────────────────
+        # â”€â”€ 0) Retry trigger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if q.lower().startswith("retry"):
             prev_sql = _LAST_SQL.get(session)
             if not prev_sql:
@@ -165,7 +165,7 @@ async def chat(inp: ChatIn):
                            ["answer_markdown","sql","rows","viz_specs","float_ids"]},
                            intent="RETRY", trace_id=trace_id)
 
-        # ── 1) Smalltalk fast path ─────────────────────────────────────────
+        # â”€â”€ 1) Smalltalk fast path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         st = _smalltalk(q)
         if st:
             trace.log("INTENT", "SMALLTALK")
@@ -173,10 +173,10 @@ async def chat(inp: ChatIn):
             append_message(session, "assistant", st)
             return ChatOut(ok=True, answer_markdown=st, intent="SMALLTALK", trace_id=trace_id)
 
-        # ── 2) Intent detection ────────────────────────────────────────────
+        # â”€â”€ 2) Intent detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         intent = detect_intent_fast(q)
         if not intent:
-            from src.models.ollama_client import rewrite_query  # type: ignore
+            from src.llm.ollama_client import rewrite_query  # type: ignore
             q_rw, intent = await rewrite_query(q, history)
             # type: ignore to silence IDE confusion on string slicing
             trace.log("REWRITE", f"LLM rewrite: {str(q_rw)[:60]} | intent={intent}",
@@ -189,7 +189,7 @@ async def chat(inp: ChatIn):
 
         result: Dict[str, Any] = {}
 
-        # ── 3) NEAREST_FLOAT path ─────────────────────────────────────────
+        # â”€â”€ 3) NEAREST_FLOAT path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if intent == "NEAREST_FLOAT" and not inp.force_sql:
             anchor = _extract_latlon(q)
             if not anchor:
@@ -208,14 +208,14 @@ async def chat(inp: ChatIn):
                 trace.log("SQL_EXEC", f"{len(rows)} nearest floats found", row_count=len(rows))
                 from src.utils.viz_builder import build_viz_specs  # type: ignore
                 viz = build_viz_specs(rows, q)
-                from src.models.ollama_client import narrate_results  # type: ignore
+                from src.llm.ollama_client import narrate_results  # type: ignore
                 import json
                 prose = await narrate_results(q, "(spatial query)", json.dumps(rows[:5], default=str))
-                md = f"### 🌊 Nearest ARGO Floats\n{prose}\n\n" + _fmt_float_table(rows)
+                md = f"### ðŸŒŠ Nearest ARGO Floats\n{prose}\n\n" + _fmt_float_table(rows)
                 result = {"answer_markdown": md, "sql": None, "rows": rows,
                           "viz_specs": viz, "float_ids": [str(r.get("platform_number","")) for r in rows[:5]]}
 
-        # ── 4) MULTI_HOP decomposition ────────────────────────────────────
+        # â”€â”€ 4) MULTI_HOP decomposition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if not result and intent == "MULTI_HOP":
             trace.log("DECOMPOSE", "Decomposing multi-hop query")
             decomposed, subqs = await maybe_decompose(q)
@@ -231,17 +231,17 @@ async def chat(inp: ChatIn):
                     sub_answers.append(sub_r)
                 result = merge_multi_hop_answers(sub_answers, q)
 
-        # ── 5) SEMANTIC path ──────────────────────────────────────────────
+        # â”€â”€ 5) SEMANTIC path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if not result and intent == "SEMANTIC":
             trace.log("VECTOR", "Routing to semantic RAG chain")
             result = await rag_chain.answer(q, trace=trace)
 
-        # ── 6) SQL_DATA path (default) ────────────────────────────────────
+        # â”€â”€ 6) SQL_DATA path (default) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if not result:
             trace.log("SQL_GEN", "Routing to SQL RAG chain")
             result = await sql_rag_chain.answer(q, history_str=history, trace=trace)
 
-        # ── 7) Store trace + session ──────────────────────────────────────
+        # â”€â”€ 7) Store trace + session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _LAST_SQL[session]  = result.get("sql") or ""
         _LAST_ROWS[session] = result.get("rows") or []
         append_message(session, "assistant", result.get("answer_markdown",""))
@@ -262,7 +262,7 @@ async def chat(inp: ChatIn):
 def _fmt_float_table(rows: list) -> str:
     if not rows:
         return "_No floats found in range._"
-    hdr  = "| Float | Time | Lat | Lon | Dist (km) | Temp °C | Salinity PSU |\n"
+    hdr  = "| Float | Time | Lat | Lon | Dist (km) | Temp Â°C | Salinity PSU |\n"
     hdr += "|---|---|---:|---:|---:|---:|---:|\n"
     body = []
     for r in rows[:8]:
@@ -274,9 +274,9 @@ def _fmt_float_table(rows: list) -> str:
     return hdr + "\n".join(body)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # POST /feedback
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.post("/feedback")
 async def submit_feedback(fb: FeedbackIn):
     from src.memory.feedback import process_user_feedback
@@ -289,9 +289,9 @@ async def submit_feedback(fb: FeedbackIn):
     return {"ok": True, "feedback_id": fid}
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # GET /trajectory/{platform_number}
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.get("/trajectory/{platform_number}")
 async def get_trajectory(
     platform_number: int,
@@ -303,9 +303,9 @@ async def get_trajectory(
     return {"platform_number": platform_number, "days": days, "points": rows}
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # GET /profile/{platform_number}
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.get("/profile/{platform_number}")
 async def get_profile(
     platform_number: int,
@@ -317,9 +317,9 @@ async def get_profile(
     return {"platform_number": platform_number, "cycle": cycle, "measurements": rows}
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # GET /stats
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.get("/stats")
 async def get_stats(
     region: str = Query(default="arabian_sea"),
@@ -330,9 +330,9 @@ async def get_stats(
     return {"region": region, "variable": variable, "days": days, "stats": stats}
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 # GET /debug/{trace_id}
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
 @router.get("/debug/{trace_id}")
 async def get_debug_trace(trace_id: str):
     trace = get_trace(trace_id)

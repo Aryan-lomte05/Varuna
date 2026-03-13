@@ -1,5 +1,5 @@
 """
-FloatChat AI — Full Ingestion Pipeline Orchestrator
+FloatChat AI â€” Full Ingestion Pipeline Orchestrator
 
 WHY python over Aditya's Node.js ingestion?
   Aditya's branch `Adi_main_api_backend` wrote a brilliant concept for a cron-based
@@ -7,12 +7,12 @@ WHY python over Aditya's Node.js ingestion?
   HPC clusters. Python uses `netCDF4` and `PyArrow`, which map directly to C-libraries
   that read multidimensional arrays 100x faster than JS ever could.
   
-  Our strategy: Use Python for the heavy lifting (parsing NetCDF → Parquet → Postgres)
+  Our strategy: Use Python for the heavy lifting (parsing NetCDF â†’ Parquet â†’ Postgres)
   to ensure we don't lose data precision or fumble the QC flags.
 
 Pipeline steps:
   1. Fetch NetCDF from IFREMER FTP (or read local)
-  2. Parse via `netcdf_reader.py` → PyArrow Table
+  2. Parse via `netcdf_reader.py` â†’ PyArrow Table
   3. Save to Parquet (DuckDB archive)
   4. Load PyArrow Table into PostgreSQL `marine_data` partitioned tables
   5. Update `floats` registry in Postgres
@@ -27,7 +27,7 @@ from pathlib import Path
 
 from src.config import settings  # type: ignore
 from src.ingestion.netcdf_reader import read_argo_netcdf, save_parquet  # type: ignore
-from src.db.postgres import get_pool  # type: ignore
+from src.database.postgres import get_pool  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -35,17 +35,17 @@ async def ingest_file(netcdf_path: str) -> bool:
     """Run the pipeline for a single ARGO NetCDF file."""
     log.info(f"Starting ingestion for {netcdf_path}")
     
-    # ── 1. Parse into Arrow Table ──────────────────────────────────────────
+    # â”€â”€ 1. Parse into Arrow Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     table = read_argo_netcdf(netcdf_path)
     if table is None or len(table) == 0:
         log.warning(f"No data parsed from {netcdf_path}")
         return False
 
-    # ── 2. Save Parquet Archive ────────────────────────────────────────────
+    # â”€â”€ 2. Save Parquet Archive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     filename = Path(netcdf_path).stem
     save_parquet(table, settings.data_parquet_dir, filename)
 
-    # ── 3. Load into PostgreSQL ────────────────────────────────────────────
+    # â”€â”€ 3. Load into PostgreSQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # We use psycopg's COPY for blazing fast bulk inserts
     pool = get_pool()
     
@@ -99,7 +99,7 @@ async def ingest_file(netcdf_path: str) -> bool:
             
             inserted = cur.rowcount
             
-            # ── 4. Update Float Registry ──────────────────────────────────────
+            # â”€â”€ 4. Update Float Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             platforms = df['platform_number'].unique()
             for p in platforms:
                 p_df = df[df['platform_number'] == p]
@@ -126,7 +126,7 @@ async def ingest_file(netcdf_path: str) -> bool:
             
             conn.commit()
 
-            # ── 5. Add to Knowledge Graph ─────────────────────────────────────
+            # â”€â”€ 5. Add to Knowledge Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             # (Deferred operation usually, but we register the float now)
             from src.memory.knowledge_graph import add_float_node  # type: ignore
             from src.utils.geo import classify_region  # type: ignore

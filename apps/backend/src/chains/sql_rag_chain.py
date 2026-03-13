@@ -3,7 +3,7 @@
 SQL RAG chain for FloatchatAI:
 - NL -> SQL via local LLM (Qwen 3B + LoRA) with strict SELECT-only extraction
 - Executes SQL and returns rows + viz specs + float ids
-- Adds a narration pass (2–4 friendly sentences) over {question, sql, top_rows_summary}
+- Adds a narration pass (2â€“4 friendly sentences) over {question, sql, top_rows_summary}
 - Prompt includes strict min/max provenance bias + few-shots
 """
 
@@ -15,7 +15,7 @@ import json
 from typing import Any, Dict, List, Optional, Tuple
 
 # DB runner (must raise if non-SELECT)
-from src.db.postgres import run_sql as execute_sql
+from src.database.postgres import run_sql as execute_sql
 
 # ---------------------------
 # Environment / switches
@@ -118,7 +118,7 @@ def _load_narrator():
         if NARRATOR_LORA_OUT:
             _narr_pipe, _narr_llm, _narr_tok = _load_pipe(BASE_MODEL, NARRATOR_LORA_OUT)
         else:
-            # Reuse main model pipeline — keeps footprint tiny
+            # Reuse main model pipeline â€” keeps footprint tiny
             main = _load_llm()
             _narr_pipe = main
         return _narr_pipe
@@ -248,13 +248,13 @@ You are a SQL generator for a PostgreSQL table `public.marine_data` with relevan
 - time (timestamp)
 - latitude (double)
 - longitude (double)
-- temp (double)            -- sea temperature (°C)
+- temp (double)            -- sea temperature (Â°C)
 - psal (double)            -- practical salinity (PSU)
 - doxy (double)            -- dissolved oxygen
 - chla (double)            -- chlorophyll-a
 - ph_in_situ_total (double)
 - nitrate (double)
-- pres (double)            -- pressure (dbar) ≈ depth (m)
+- pres (double)            -- pressure (dbar) â‰ˆ depth (m)
 
 Regions:
 - "Equator": latitude BETWEEN -5 AND 5.
@@ -263,12 +263,12 @@ Regions:
   - NW Arabian Sea: lat >= 15 AND lon  < 57 (inside Arabian Sea)
 - "Bay of Bengal": longitude BETWEEN 75 AND 100 AND latitude BETWEEN 5 AND 25.
 
-Time windows like “past 30 days”: time > NOW() - INTERVAL '30 days'.
+Time windows like â€œpast 30 daysâ€: time > NOW() - INTERVAL '30 days'.
 
 Depth profile:
 - Use `pres AS depth_m` and ORDER BY pres ASC.
 - Tight windows: ABS(latitude - <lat>) < 0.02 AND ABS(longitude - <lon>) < 0.02
-- For a target time, use BETWEEN target-interval AND target+interval, typically ±60 minutes.
+- For a target time, use BETWEEN target-interval AND target+interval, typically Â±60 minutes.
 
 {_PROVENANCE_HELP}
 
@@ -281,7 +281,7 @@ Here are a few examples to emulate:
 def _build_prompt(question: str, history: Optional[List[Dict[str, str]]] = None) -> str:
     sys = (
         "You are a precise SQL generator. Output ONLY one PostgreSQL SELECT query. "
-        "No markdown, no backticks, no explanation—just SQL."
+        "No markdown, no backticks, no explanationâ€”just SQL."
     )
     content = [sys, _SCHEMAS.strip(), f"User question: {question.strip()}", "Return a single SELECT."]
     if history:
@@ -302,7 +302,7 @@ def _mk_table(rows: List[dict], max_cols: int = 7, max_rows: int = 10) -> str:
     for r in rows[:max_rows]:
         body.append("|" + "|".join(str(r.get(c, "")) for c in cols) + "|")
     if len(rows) > max_rows:
-        body.append(f"\n_…and {len(rows) - max_rows} more rows not shown._")
+        body.append(f"\n_â€¦and {len(rows) - max_rows} more rows not shown._")
     return hdr + "\n" + "\n".join(body)
 
 def _build_viz(rows: List[dict]) -> Dict[str, Any]:
@@ -316,7 +316,7 @@ def _build_viz(rows: List[dict]) -> Dict[str, Any]:
             "id": str(r.get("platform_number", "")),
             "lat": float(lat),
             "lon": float(lon),
-            "label": f"{r.get('platform_number')} · {r.get('time')}"
+            "label": f"{r.get('platform_number')} Â· {r.get('time')}"
         })
     center = [points[0]["lat"], points[0]["lon"]] if points else [15.0, 70.0]
     return {"map": {"center": center, "zoom": 4, "points": points}, "charts": []}
@@ -338,17 +338,17 @@ def _narrate(question: str, sql: str, rows: List[dict]) -> str:
     return f"{lead}\n```sql\n{sql}\n```\n\n**Top rows:**\n{_mk_table(rows)}"
 
 # ---------------------------
-# Tiny narration pass (LLM → 2–4 friendly sentences)
+# Tiny narration pass (LLM â†’ 2â€“4 friendly sentences)
 # ---------------------------
 _NARR_SYS = (
     "You are a concise ocean-data narrator. Given a user question, the SQL used, and a short top-row preview, "
-    "write a friendly 2–4 sentence English paragraph. Avoid restating the entire table; mention the region/time window if obvious. "
+    "write a friendly 2â€“4 sentence English paragraph. Avoid restating the entire table; mention the region/time window if obvious. "
     "No markdown code fences."
 )
 
 def narrate_result(question: str, sql: str, top_rows_summary: str) -> str:
     """
-    Calls local narrator model (reuse main by default) to produce 2–4 sentences.
+    Calls local narrator model (reuse main by default) to produce 2â€“4 sentences.
     Falls back gracefully to a templated sentence if model unavailable.
     """
     pipe = _load_narrator()
@@ -365,7 +365,7 @@ def narrate_result(question: str, sql: str, top_rows_summary: str) -> str:
         # strip any extra role tags
         for tag in ("[SYSTEM]","[USER]","[ASSISTANT]"):
             text = text.replace(tag, "")
-        # keep 2–4 sentences heuristic
+        # keep 2â€“4 sentences heuristic
         sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         sentences = [s.strip() for s in sentences if s.strip()]
         if not sentences:
@@ -375,7 +375,7 @@ def narrate_result(question: str, sql: str, top_rows_summary: str) -> str:
         return " ".join(sentences)
     except Exception:
         # simple fallback
-        return ("Here’s a concise summary of your request. I generated an appropriate SQL query, "
+        return ("Hereâ€™s a concise summary of your request. I generated an appropriate SQL query, "
                 "ran it on the marine dataset, and show a compact table of top results below.")
 
 # ---------------------------
@@ -422,7 +422,7 @@ def answer(question: str,
            limit: int = DEFAULT_LIMIT) -> Dict[str, Any]:
     """
     Main entry:
-    - If prior_sql provided → sanitize & run.
+    - If prior_sql provided â†’ sanitize & run.
     - Else build prompt, call model (or template), sanitize, run.
     - Attach narration via narrate_result().
     - Return dict with markdown, sql, rows, viz_specs, float_ids.

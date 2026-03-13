@@ -1,5 +1,5 @@
 """
-FloatChat AI — User Personalization
+FloatChat AI â€” User Personalization
 
 Stores and retrieves user-specific settings:
 - Preferred regions (e.g. 'Arabian Sea')
@@ -13,7 +13,7 @@ import logging
 from typing import Any, Dict, Optional
 
 # type: ignore for IDE import issues
-from src.db.postgres import run_sql, get_pool 
+from src.database.postgres import run_sql, get_pool 
 
 log = logging.getLogger(__name__)
 

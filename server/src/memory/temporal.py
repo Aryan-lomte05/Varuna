@@ -1,5 +1,5 @@
 """
-FloatChat AI — Temporal Memory & Recency Bias
+FloatChat AI â€” Temporal Memory & Recency Bias
 
 Ocean data is highly seasonal. A query like "What is the temperature in the Arabian Sea?"
 should prioritize RECENT data over historical data unless historical context is requested.
@@ -14,7 +14,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.db.postgres import run_sql  # type: ignore
+from src.database.postgres import run_sql  # type: ignore
 
 log = logging.getLogger(__name__)
 
