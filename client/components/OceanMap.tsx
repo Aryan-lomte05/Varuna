@@ -4,13 +4,9 @@ import { useFloats } from '@/hooks/useFloats';
 import { useMemo, useState } from 'react';
 import Map from 'react-map-gl';
 import DeckGL from '@deck.gl/react';
-import { IconLayer } from '@deck.gl/layers';
+import { ScatterplotLayer } from '@deck.gl/layers';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-
-const BUOY_ICON_MAPPING = {
-  marker: { x: 0, y: 0, width: 128, height: 128, mask: true }
-};
 
 export default function OceanMap() {
   const { floats, loading } = useFloats();
@@ -24,18 +20,23 @@ export default function OceanMap() {
 
   const layers = useMemo(() => {
     return [
-      new IconLayer({
-        id: 'float-icons',
+      new ScatterplotLayer({
+        id: 'float-points',
         data: floats,
         pickable: true,
-        iconAtlas: 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
-        iconMapping: BUOY_ICON_MAPPING,
-        getIcon: d => 'marker',
-        sizeScale: 15,
-        getPosition: d => [d.lon, d.lat],
-        getSize: d => 3,
-        getColor: d => d.status === 'active' ? [0, 240, 255] : [255, 190, 11],
-        getCursor: () => 'pointer',
+        opacity: 1,
+        stroked: true,
+        filled: true,
+        radiusScale: 1,
+        radiusMinPixels: 2.5,
+        radiusMaxPixels: 12,
+        lineWidthMinPixels: 0.5,
+        getPosition: (d: any) => [d.lon, d.lat],
+        getRadius: (d: any) => 12000, 
+        // Emerald for active, Zinc-500/Amber for other
+        getFillColor: (d: any) => d.status === 'active' ? [16, 185, 129, 210] : [245, 158, 11, 150],
+        getLineColor: (d: any) => d.status === 'active' ? [16, 185, 129, 255] : [255, 255, 255, 50],
+        getCursor: () => 'crosshair',
         transitions: {
           getPosition: { duration: 1000, easing: (t: number) => t * (2 - t) }
         }
@@ -44,12 +45,12 @@ export default function OceanMap() {
   }, [floats]);
 
   return (
-    <div className="w-full h-full relative rounded-2xl overflow-hidden glass-card">
+    <div className="w-full h-full relative rounded-2xl overflow-hidden glass noise">
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-deep/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-argo-cyan border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-argo-cyan font-mono text-sm uppercase tracking-widest">Acquiring Fleet Telemetry</p>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950/40 backdrop-blur-md">
+          <div className="flex flex-col items-center gap-4">
+            <span className="w-8 h-8 rounded-full border-2 border-white/10 border-t-accent animate-spin" />
+            <p className="text-accent font-mono text-[10px] uppercase tracking-widest">Acquiring Telemetry</p>
           </div>
         </div>
       )}
@@ -64,19 +65,30 @@ export default function OceanMap() {
           if (!object) return null;
           return {
             html: `
-              <div class="px-2 py-1">
-                <div class="text-xs font-mono text-argo-cyan mb-1">ARGO ${object.wmo_id}</div>
-                <div class="text-[10px] text-gray-300">Profiles: ${object.total_profiles}</div>
-                <div class="text-[10px] text-gray-300">Last Seen: ${new Date(object.last_seen).toLocaleDateString()}</div>
-                <div class="text-[10px] mt-1 uppercase ${object.status === 'active' ? 'text-green-400' : 'text-argo-gold'}">● ${object.status}</div>
+              <div class="px-2 py-1.5 flex flex-col gap-1">
+                <div class="text-[11px] font-mono text-zinc-200 border-b border-white/10 pb-1 mb-1">
+                  WMO ${object.wmo_id}
+                </div>
+                <div class="flex justify-between gap-4 text-[10px] font-mono text-zinc-400">
+                  <span>Profiles</span>
+                  <span class="text-zinc-300">${object.total_profiles}</span>
+                </div>
+                <div class="flex justify-between gap-4 text-[10px] font-mono text-zinc-400">
+                  <span>Last Seen</span>
+                  <span class="text-zinc-300">${new Date(object.last_seen).toLocaleDateString()}</span>
+                </div>
+                <div class="mt-1 text-[9px] font-mono uppercase tracking-widest ${object.status === 'active' ? 'text-accent' : 'text-amber-500'}">
+                  ● ${object.status}
+                </div>
               </div>
             `,
             style: {
-              backgroundColor: 'rgba(11, 17, 33, 0.9)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: 'rgba(9, 9, 11, 0.85)', // zinc-950
+              border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '8px',
               color: 'white',
-              backdropFilter: 'blur(8px)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
             }
           };
         }}
@@ -86,10 +98,6 @@ export default function OceanMap() {
           mapStyle="mapbox://styles/mapbox/dark-v11"
         />
       </DeckGL>
-      
-      <div className="absolute top-4 left-4 z-10 px-3 py-2 bg-black/50 backdrop-blur border border-white/10 rounded-lg text-xs font-mono">
-        <span className="text-argo-cyan">{floats.length}</span> FLOATS TRACKED
-      </div>
     </div>
   );
 }

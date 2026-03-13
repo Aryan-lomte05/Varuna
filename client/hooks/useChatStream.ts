@@ -27,126 +27,107 @@ export function useChatStream() {
   const wsRef = useRef<WebSocket | null>(null);
   const currentMessageIdRef = useRef<string | null>(null);
 
-  // Initialize WebSocket connection to the Node API Gateway
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
+
+    let gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_WS_URL || 'ws://localhost:4000';
+    if (!process.env.NEXT_PUBLIC_GATEWAY_WS_URL && process.env.NEXT_PUBLIC_API_URL) {
+      gatewayUrl = process.env.NEXT_PUBLIC_API_URL.replace('http', 'ws');
+    }
+    
+    try {
+      const ws = new WebSocket(`${gatewayUrl}/ws/chat?token=dev-token`);
+      
+      ws.onopen = () => {
+        console.log('🔗 WebSocket connected to Gateway');
+        setError(null);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          const { type, data } = msg;
+          
+          if (type === 'token') {
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, content: last.content + data } ];
+            });
+          }
+          else if (type === 'intent') {
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, metadata: { ...last.metadata, intent: data } } ];
+            });
+          }
+          else if (type === 'sql') {
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, metadata: { ...last.metadata, sql: data } } ];
+            });
+          }
+          else if (type === 'rows') {
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, metadata: { ...last.metadata, rows: data } } ];
+            });
+          }
+          else if (type === 'viz') {
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, metadata: { ...last.metadata, viz_specs: data } } ];
+            });
+          }
+          else if (type === 'done') {
+            setIsTyping(false);
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== 'assistant') return prev;
+              return [ ...prev.slice(0, -1), { ...last, isStreaming: false, trace_id: data.trace_id } ];
+            });
+          }
+          else if (type === 'error') {
+            setIsTyping(false);
+            setError(data);
+          }
+        } catch (e) {
+          console.error('Failed to parse WS message', e, event.data);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error('WS Error:', err);
+        setError('Connection to intelligence core lost.');
+        setIsTyping(false);
+      };
+
+      ws.onclose = () => {
+        console.log('WS Closed. Reconnecting in 3s...');
+        wsRef.current = null;
+        setTimeout(() => connect(), 3000);
+      };
+
+      wsRef.current = ws;
+    } catch (e) {
+      console.error("Failed to initialize WebSocket:", e);
+      setTimeout(() => connect(), 3000);
+    }
+  }, []);
+
   useEffect(() => {
-    // In dev: proxy via next.config.js or direct. 
-    // Here we point directly to our Gateway WebSocket endpoint
-    const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_WS_URL || 'ws://localhost:4000';
-    
-    // Pass dev-token to bypass Gateway Auth for now
-    const ws = new WebSocket(`${gatewayUrl}/ws/chat?token=dev-token`);
-    
-    ws.onopen = () => {
-      console.log('🔗 WebSocket connected to Gateway');
-      setError(null);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        const { type, data } = msg;
-        
-        // 1. Handle streaming tokens
-        if (type === 'token') {
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            
-            return [
-              ...prev.slice(0, -1),
-              { ...last, content: last.content + data }
-            ];
-          });
-        }
-        
-        // 2. Handle Intent detection
-        else if (type === 'intent') {
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            return [
-              ...prev.slice(0, -1),
-              { ...last, metadata: { ...last.metadata, intent: data } }
-            ];
-          });
-        }
-
-        // 3. Handle SQL
-        else if (type === 'sql') {
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            return [
-              ...prev.slice(0, -1),
-              { ...last, metadata: { ...last.metadata, sql: data } }
-            ];
-          });
-        }
-
-        // 4. Handle Rows (data)
-        else if (type === 'rows') {
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            return [
-              ...prev.slice(0, -1),
-              { ...last, metadata: { ...last.metadata, rows: data } }
-            ];
-          });
-        }
-
-        // 5. Handle Viz specs
-        else if (type === 'viz') {
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            return [
-              ...prev.slice(0, -1),
-              { ...last, metadata: { ...last.metadata, viz_specs: data } }
-            ];
-          });
-        }
-
-        // 6. Handle Completion
-        else if (type === 'done') {
-          setIsTyping(false);
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== 'assistant') return prev;
-            return [
-              ...prev.slice(0, -1),
-              { ...last, isStreaming: false, trace_id: data.trace_id }
-            ];
-          });
-        }
-
-        // 7. Handle Error
-        else if (type === 'error') {
-          setIsTyping(false);
-          setError(data);
-        }
-
-      } catch (e) {
-        console.error('Failed to parse WS message', e, event.data);
+    connect();
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // Prevent reconnect loop on unmount
+        wsRef.current.close();
       }
     };
-
-    ws.onerror = (err) => {
-      console.error('WS Error:', err);
-      setError('Connection to intelligence core lost.');
-      setIsTyping(false);
-    };
-
-    ws.onclose = () => {
-      console.log('WS Closed');
-    };
-
-    wsRef.current = ws;
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+  }, [connect]);
 
   const sendMessage = useCallback((content: string) => {
     if (!content.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
