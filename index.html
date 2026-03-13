@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<style>
+    #main-wrapper{
+    display:flex;
+    gap:150px;
+    
+}
+
+
+#float-container {
+display: block;
+margin-top:150px;
+gap: 20px; 
+padding: 20px;
+background-color:palegoldenrod;
+border-radius: 10px;
+width: 330px;
+height:500px;
+overflow-y:auto;
+max-height:80vh;
+
+}
+
+#map-container {
+    background-color:palegoldenrod;
+    margin-top:150px;
+    width: 700px;
+    height:500px;
+    border-radius:10px;
+    
+}
+
+/* --- Global Styles & Font --- */
+body{
+    background-color: #f0f2f5; /* A light grey background to make cards pop */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  /* --- Card Link Wrapper --- */
+  /* This styles the <a> tag that wraps the entire card */
+  .float-card-link {
+    text-decoration: none; /* Removes the default blue underline from links */
+    color: inherit;        /* Makes the card text use the default color, not link blue */
+    display: block;        /* Ensures the link takes up the full space of the card */
+    margin-top: 20px;
+    width: 320px;
+  }
+  
+  /* --- Main Card Container --- */
+  /* This is the core style for the card itself */
+  .float-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px; /* Rounded corners */
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* A soft shadow for a "floating" effect */
+    transition: all 0.2s ease-in-out; /* Smooth transition for the hover effect */
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Creates space between the header and details sections */
+  }
+  
+  /* --- Hover Effect --- */
+  /* Makes the card interactive on mouse-over */
+  .float-card:hover {
+    transform: translateY(-4px); /* Lifts the card up slightly */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); /* A more pronounced shadow */
+  }
+  
+  /* --- Card Header Section --- */
+  /* Uses Flexbox to position the title and status badge */
+  .card-header {
+    display: flex;
+    justify-content: space-between; /* Pushes title to the left and badge to the right */
+    align-items: center;
+  }
+  
+  /* --- Card Title (h2) --- */
+  .card-header h2 {
+    margin: 0; /* Removes default browser margin */
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1c1c1e;
+  }
+  
+  /* --- Status Badge --- */
+  /* General style for all badges */
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 9999px; /* A large value creates the "pill" shape */
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+  
+  /* Specific style for the 'active' status */
+  .status-badge.active {
+    background-color: #d7f5e8; /* Light green background */
+    color: #1a8a58;          /* Dark green text */
+  }
+  
+  /* Specific style for the 'inactive' status */
+  .status-badge.inactive {
+    background-color: #f3a0a0; /* Light grey background */
+    color: #a20d0d;          /* Dark grey text */
+  }
+  
+  /* --- Card Details Section --- */
+  .card-details {
+    font-size: 1rem;
+    color: #555555;
+    line-height: 1.5;
+  }
+  
+  /* Removes default margins from the <p> tags for consistent spacing */
+  .card-details p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Adds space between the icon and the text */
+  }
+  
+  /* A little extra space between the two detail lines */
+  .card-details p:first-child {
+    margin-bottom: 8px;
+  }
+</style>
+<body>
+  <div id="main-wrapper">
+    <div id="float-container"></div>
+    <div id="map-container"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js">
+   // --- 1. INITIALIZE CLIENTS ---
+const SUPABASE_URL = 'https://nskcjldhwowefenrnkfl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5za2NqbGRod293ZWZlbnJua2ZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczMDA1MzIsImV4cCI6MjA3Mjg3NjUzMn0.LqWo0u5SWTXHD8orJ7KrLCNhuSaYvGpIWm4GmuGRf4I';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const map = L.map('map-container').setView([0, 0], 2);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+}).addTo(map);
+
+// --- 2. DATA FETCHING FUNCTION ---
+async function getFloatsData() {
+  const { data, error } = await supabaseClient.rpc('get_latest_float_data',{});
+  if (error) {
+    console.error('Error fetching data:', error);
+    return [];
+  }
+  return data;
+}
+
+// --- 3. MAIN FUNCTION TO BUILD THE PAGE ---
+async function main() {
+  const floatContainer = document.getElementById('float-container');
+  const floats = await getFloatsData();
+
+  if (floats.length === 0) {
+    floatContainer.innerHTML = '<p>No float data found.</p>';
+    return;
+  }
+  floatContainer.innerHTML = ''; // Clear "Loading..." message
+  
+  floats.forEach(float => {
+    // Create the float card
+    const cardHTML = `
+      <a href="detail.html?id=${float.id}" class="float-card-link">
+        <article class="float-card">
+          <h4>Float ${float.id}</h4>
+          <p>📍 Location: ${float.latitude.toFixed(4)}, ${float.longitude.toFixed(4)}</p>
+          <p>🗓️ Last Update: ${new Date(float.last_update).toLocaleString()}</p>
+        </article>
+      </a>
+    `;
+    floatContainer.innerHTML += cardHTML;
+    
+    // Create the map marker
+    L.marker([float.latitude, float.longitude])
+      .addTo(map)
+      .bindPopup(`<b>Float ${float.id}</b><br>Last seen: ${new Date(float.last_update).toLocaleDateString()}`);
+  });
+}
+
+// --- 4. RUN THE APP ---
+main();      
+
+</script>
+  
+</body>
+</html>
+
+

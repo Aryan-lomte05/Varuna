@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Float Details</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c1425 0%, #1a2332 50%, #0f1b2d 100%);
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(15, 27, 45, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .back-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .float-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .float-id {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .float-year {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .year-dropdown {
+            background: rgba(15, 27, 45, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .year-dropdown:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(15, 27, 45, 0.95);
+        }
+
+        .year-dropdown:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+
+        .year-dropdown option {
+            background: #1e293b;
+            color: #e2e8f0;
+        
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            gap: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 27, 45, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .content-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .trajectory-section {
+            margin-bottom: 2rem;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .section-card {
+            background: rgba(15, 27, 45, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(34, 197, 94, 0.2) 100%);
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .map-container {
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trajectory-path {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-container {
+            height: 350px;
+            position: relative;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .glow-effect {
+            position: relative;
+        }
+
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(34, 197, 94, 0.1) 100%);
+            border-radius: inherit;
+            filter: blur(20px);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .glow-effect:hover::before {
+            opacity: 1;
+        }
+
+
+        /* Fullscreen background video */
+#bgVideo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  /* ensures video fills screen without distortion */
+    z-index: -1;        /* behind all content */
+    filter: brightness(0.5) contrast(1.2); /* darken for readability */
+}
+
+/* Optional overlay for better contrast */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.35); /* adjust darkness as needed */
+    z-index: 0;
+}
+
+/* Make sure content sits above video */
+body, header, main {
+    position: relative;
+    z-index: 1;
+}
+
+/* Update your glow-effect cards for readability */
+.glow-effect {
+    background: rgba(15, 23, 42, 0.8); /* semi-transparent dark background */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    border-radius: 12px;
+    padding: 1rem;
+    backdrop-filter: blur(5px); /* blur background for focus */
+}
+
+    </style>
+</head>
+<body>
+
+    <video autoplay muted loop id="bgVideo">
+    <source src="video.mp4" type="video/mp4">
+    <!-- Your browser does not support the video tag. -->
+</video>
+
+
+    <header class="header">
+        <div class="header-content">
+            <a href="#" class="back-btn" onclick="goBack()">
+                ← Back to Dashboard
+            </a>
+            <div class="float-title">
+                <h1 class="float-id" id="floatId">Float 4903660</h1>
+                <div class="float-year" id="floatYear">30 position points</div>
+            </div>
+            <div class="header-controls">
+                <select class="year-dropdown" id="yearSelect">
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                    <option value="2021">2021</option>
+                </select>
+                <div class="status-indicator status-active" id="floatStatus">
+                    Active
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="stats-grid">
+            <div class="stat-card glow-effect">
+                <div class="stat-value" style="color: #60a5fa;" id="totalDistance">398 km</div>
+                <div class="stat-label">Total Distance</div>
+            </div>
+            <div class="stat-card glow-effect">
+                <div class="stat-value" style="color: #34d399;" id="maxDepth">1980 m</div>
+                <div class="stat-label">Max Depth</div>
+            </div>
+            <div class="stat-card glow-effect">
+                <div class="stat-value" style="color: #f59e0b;" id="daysActive">30</div>
+                <div class="stat-label">Days Active</div>
+            </div>
+            <div class="stat-card glow-effect">
+                <div class="stat-value" style="color: #ec4899;" id="lastUpdate">9/26/2025</div>
+                <div class="stat-label">Last Update</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="trajectory-section">
+                <div class="section-card glow-effect">
+                    <div class="section-header">
+                        <h2 class="section-title">Float Trajectory</h2>
+                        <p class="section-subtitle">Complete path with position points</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="map-container">
+                            <svg class="trajectory-path" viewBox="0 0 400 400">
+                                <defs>
+                                    <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+                                        <stop offset="50%" style="stop-color:#34d399;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M50,350 Q100,250 150,200 T250,150 Q300,100 350,80" 
+                                      stroke="url(#pathGradient)" 
+                                      stroke-width="3" 
+                                      fill="none" 
+                                      stroke-linecap="round">
+                                    <animate attributeName="stroke-dasharray" 
+                                             values="0,1000;1000,0" 
+                                             dur="3s" 
+                                             repeatCount="indefinite"/>
+                                </path>
+                                <circle cx="50" cy="350" r="6" fill="#60a5fa">
+                                    <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite"/>
+                                </circle>
+                                <circle cx="350" cy="80" r="6" fill="#f59e0b">
+                                    <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+                <div class="section-card glow-effect">
+                    <div class="section-header">
+                        <h3 class="section-title">Temperature (°C)</h3>
+                        <p class="section-subtitle">Water temperature vs depth</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card glow-effect">
+                    <div class="section-header">
+                        <h3 class="section-title">Salinity (PSU)</h3>
+                        <p class="section-subtitle">Practical salinity units vs depth</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="chart-container">
+                            <canvas id="salinityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card glow-effect">
+                    <div class="section-header">
+                        <h3 class="section-title">Dissolved Oxygen (μmol/kg)</h3>
+                        <p class="section-subtitle">Oxygen concentration vs depth</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="chart-container">
+                            <canvas id="oxygenChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card glow-effect">
+                    <div class="section-header">
+                        <h3 class="section-title">Chlorophyll (mg/m³)</h3>
+                        <p class="section-subtitle">Chlorophyll-a concentration vs depth</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="chart-container">
+                            <canvas id="chlorophyllChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Fake data for different floats and years.
+        const floatData = {
+            '4903660': {
+                '2024': {
+                    id: '4903660',
+                    year: '2024',
+                    status: 'Active',
+                    totalDistance: '398 km',
+                    maxDepth: '1980 m',
+                    daysActive: '30',
+                    lastUpdate: '9/26/2025',
+                    temperature: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [28.5, 25.2, 18.7, 12.4, 8.9, 6.2, 4.8, 3.9, 2.8, 2.1]
+                    },
+                    salinity: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [34.2, 34.8, 35.1, 35.3, 35.2, 35.0, 34.9, 34.8, 34.7, 34.6]
+                    },
+                    oxygen: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [220, 180, 120, 80, 60, 45, 38, 42, 48, 52]
+                    },
+                    chlorophyll: {
+                        depths: [0, 50, 100, 150, 200, 250, 300, 400, 500, 600],
+                        values: [0.8, 2.1, 3.2, 1.8, 0.9, 0.4, 0.2, 0.1, 0.05, 0.02]
+                    }
+                },
+                '2023': {
+                    id: '4903660',
+                    year: '2023',
+                    status: 'Active',
+                    totalDistance: '465 km',
+                    maxDepth: '2050 m',
+                    daysActive: '35',
+                    lastUpdate: '12/31/2023',
+                    temperature: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [29.1, 26.3, 19.5, 13.2, 9.5, 6.8, 5.1, 4.2, 3.1, 2.4]
+                    },
+                    salinity: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [34.0, 34.6, 34.9, 35.1, 35.0, 34.8, 34.7, 34.6, 34.5, 34.4]
+                    },
+                    oxygen: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [230, 190, 130, 85, 65, 50, 42, 46, 52, 56]
+                    },
+                    chlorophyll: {
+                        depths: [0, 50, 100, 150, 200, 250, 300, 400, 500, 600],
+                        values: [0.9, 2.3, 3.5, 2.0, 1.1, 0.5, 0.25, 0.12, 0.06, 0.03]
+                    }
+                },
+                '2022': {
+                    id: '4903660',
+                    year: '2022',
+                    status: 'Active',
+                    totalDistance: '521 km',
+                    maxDepth: '1950 m',
+                    daysActive: '40',
+                    lastUpdate: '12/31/2022',
+                    temperature: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [27.8, 24.5, 17.9, 11.8, 8.2, 5.9, 4.5, 3.6, 2.5, 1.9]
+                    },
+                    salinity: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [34.3, 34.9, 35.2, 35.4, 35.3, 35.1, 35.0, 34.9, 34.8, 34.7]
+                    },
+                    oxygen: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [215, 175, 115, 75, 55, 40, 35, 39, 45, 49]
+                    },
+                    chlorophyll: {
+                        depths: [0, 50, 100, 150, 200, 250, 300, 400, 500, 600],
+                        values: [0.7, 1.8, 2.9, 1.6, 0.8, 0.35, 0.18, 0.09, 0.04, 0.02]
+                    }
+                }
+            },
+            '4903661': {
+                '2024': {
+                    id: '4903661',
+                    year: '2024',
+                    status: 'Active',
+                    totalDistance: '445 km',
+                    maxDepth: '2100 m',
+                    daysActive: '28',
+                    lastUpdate: '9/25/2025',
+                    temperature: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [26.8, 23.1, 16.9, 11.2, 7.8, 5.9, 4.2, 3.5, 2.6, 2.0]
+                    },
+                    salinity: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [34.5, 35.0, 35.2, 35.4, 35.1, 34.9, 34.8, 34.7, 34.6, 34.5]
+                    },
+                    oxygen: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+                        values: [210, 170, 110, 75, 55, 40, 35, 40, 45, 50]
+                    },
+                    chlorophyll: {
+                        depths: [0, 50, 100, 150, 200, 250, 300, 400, 500, 600],
+                        values: [0.6, 1.9, 2.8, 1.5, 0.7, 0.3, 0.15, 0.08, 0.04, 0.02]
+                    }
+                }
+            },
+            '4903662': {
+                '2024': {
+                    id: '4903662',
+                    year: '2024',
+                    status: 'Inactive',
+                    totalDistance: '312 km',
+                    maxDepth: '1650 m',
+                    daysActive: '22',
+                    lastUpdate: '9/20/2025',
+                    temperature: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500],
+                        values: [29.2, 26.5, 20.1, 14.7, 10.2, 7.3, 5.5, 4.1, 3.2]
+                    },
+                    salinity: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500],
+                        values: [33.9, 34.6, 34.9, 35.1, 35.0, 34.8, 34.7, 34.6, 34.5]
+                    },
+                    oxygen: {
+                        depths: [0, 100, 200, 400, 600, 800, 1000, 1200, 1500],
+                        values: [230, 190, 130, 85, 65, 50, 43, 47, 51]
+                    },
+                    chlorophyll: {
+                        depths: [0, 50, 100, 150, 200, 250, 300, 400, 500],
+                        values: [1.2, 2.5, 3.8, 2.1, 1.1, 0.5, 0.25, 0.12, 0.06]
+                    }
+                }
+            }
+        };
+
+        let charts = {};//empty object to store all the graphs
+     //html canvas elements where graphs will be drawn
+        function createChart(canvasId, data, label, color, yAxisLabel) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.depths,
+                    datasets: [{
+                        label: label,
+                        data: data.values,
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#1e293b',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Depth (m)',
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: '#334155'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            reverse: false
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: yAxisLabel,
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                color: '#334155'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+       //this func gets data for specific flaot and year from the fake data...and if no data is found it uses default data
+        function updateFloatData(floatId, year = '2024') {
+            const floatYearData = floatData[floatId] && floatData[floatId][year];
+            const data = floatYearData || floatData['4903660']['2024'];
+            
+            // it updates the header title and info
+            document.getElementById('floatId').textContent = `Float ${data.id}`;
+            document.getElementById('floatYear').textContent = `${data.daysActive} position points`;
+            
+            // Update year 
+            document.getElementById('yearSelect').value = year;
+            
+            const statusElement = document.getElementById('floatStatus');
+            statusElement.textContent = data.status;
+            statusElement.className = `status-indicator ${data.status.toLowerCase() === 'active' ? 'status-active' : 'status-inactive'}`;
+            
+            // Update stats
+            document.getElementById('totalDistance').textContent = data.totalDistance;
+            document.getElementById('maxDepth').textContent = data.maxDepth;
+            document.getElementById('daysActive').textContent = data.daysActive;
+            document.getElementById('lastUpdate').textContent = data.lastUpdate;
+            
+            // Update charts
+            createChart('temperatureChart', data.temperature, 'Temperature', '#ef4444', 'Temperature (°C)');
+            createChart('salinityChart', data.salinity, 'Salinity', '#3b82f6', 'Salinity (PSU)');
+            createChart('oxygenChart', data.oxygen, 'Dissolved Oxygen', '#10b981', 'Dissolved Oxygen (μmol/kg)');
+            createChart('chlorophyllChart', data.chlorophyll, 'Chlorophyll', '#8b5cf6', 'Chlorophyll (mg/m³)');
+        }
+        //this this func gets the flaot id..previous page
+        function getFloatIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('floatId') || '4903660';
+        }
+       //previous page func
+        function goBack() {
+            window.history.back();
+        }
+
+        //so here basically it will wait for the page to laod fully ..it will get float id..update the page according to the data..updates according to the year alos
+        document.addEventListener('DOMContentLoaded', function() {
+            const floatId = getFloatIdFromUrl();
+            updateFloatData(floatId);
+            
+            // year dropdown event listener
+            document.getElementById('yearSelect').addEventListener('change', function() {
+                const selectedYear = this.value;
+                const currentFloatId = getFloatIdFromUrl();
+                updateFloatData(currentFloatId, selectedYear);
+            });
+        });
+
+        // CSS for inactive status
+        const style = document.createElement('style');
+        style.textContent = `
+            .status-inactive {
+                background: rgba(239, 68, 68, 0.2);
+                color: #f87171;
+                border: 1px solid rgba(239, 68, 68, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
