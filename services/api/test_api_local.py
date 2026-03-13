@@ -45,16 +45,19 @@ def _post(path: str, body: dict[str, Any], timeout: int = 120) -> dict[str, Any]
         return json.loads(r.read())
 
 
-def check(label: str, fn):
+def check(label: str, fn) -> bool:
     """Run a test and print result."""
+    import itertools
     t0 = time.time()
     try:
         result = fn()
         elapsed = time.time() - t0
         print(f"{PASS}  {label}  {DIM}({elapsed:.1f}s){RESET}")
         if isinstance(result, dict):
-            for k, v in list(result.items())[:3]:
-                snippet = str(v)[:80] + ("…" if len(str(v)) > 80 else "")
+            items: list[tuple[str, Any]] = list(result.items())
+            for k, v in itertools.islice(items, 3):
+                v_str: str = str(v)
+                snippet = (v_str[:80] + "…") if len(v_str) > 80 else v_str  # type: ignore[index]
                 print(f"       {DIM}{k}: {snippet}{RESET}")
         return True
     except Exception as e:

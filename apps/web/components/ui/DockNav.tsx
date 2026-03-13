@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { useRef, useState } from "react";
-import { Map, MessageSquare, Database, Settings, Activity, Waves } from "lucide-react";
+import { type LucideIcon, Map, MessageSquare, Database, Settings, Activity, Waves } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "map",      icon: Map,            label: "Fleet Map",       active: true  },
@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 function DockItem({
   icon: Icon, label, active, mouseX,
 }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;   // LucideIcon is the correct exported type from lucide-react
   label: string;
   active: boolean;
   mouseX: ReturnType<typeof useMotionValue<number>>;
