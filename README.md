@@ -1,4 +1,4 @@
-# FloatChatAI — Monorepo (Next.js UI + FastAPI AIML)
+# 🌊 FloatChat AI — Global Oceanic Intelligence (Final Edition)
 
 ## Quick Start (Windows friendly)
 1. Backend
