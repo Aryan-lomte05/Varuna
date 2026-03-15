@@ -67,7 +67,7 @@ def run_sql(sql: str, params: Optional[dict] = None, limit: int = 500) -> List[D
             return [dict(r) for r in rows]
 
 
-# ── Nearest floats via PostGIS ST_DWithin ─────────────────────────────────────
+# ── Nearest floats via Haversine distance (no PostGIS required) ───────────────
 def nearest_floats(
     lat: float, lon: float,
     radius_km: float = 300.0,
@@ -76,8 +76,8 @@ def nearest_floats(
     when: Optional[datetime] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Find nearest ARGO float surface observations using PostGIS spatial index.
-    Much faster than the old haversine arithmetic — uses GIST index.
+    Find nearest ARGO float surface observations using Haversine distance.
+    Uses standard SQL math on latitude/longitude columns — no PostGIS required.
 
     Args:
         lat, lon: anchor point
@@ -86,8 +86,6 @@ def nearest_floats(
         limit: max rows
         when: target datetime (±3 days window if provided)
     """
-    radius_m = radius_km * 1000.0
-
     time_clause = (
         "AND time BETWEEN %(when)s - INTERVAL '3 days' AND %(when)s + INTERVAL '3 days'"
         if when is not None
@@ -95,26 +93,38 @@ def nearest_floats(
     )
 
     sql = f"""
-    WITH surface AS (
+    WITH candidate AS (
         SELECT DISTINCT ON (platform_number, DATE_TRUNC('day', time))
             platform_number, time, latitude, longitude,
             temp, psal, doxy, chla, nitrate, pres,
-            ST_Distance(geom, ST_MakePoint(%(lon)s, %(lat)s)::GEOGRAPHY) / 1000.0 AS km
+            6371.0 * acos(
+                LEAST(1.0, GREATEST(-1.0,
+                    sin(radians(%(lat)s)) * sin(radians(latitude))
+                    + cos(radians(%(lat)s)) * cos(radians(latitude))
+                    * cos(radians(longitude) - radians(%(lon)s))
+                ))
+            ) AS km
         FROM public.marine_data
-        WHERE ST_DWithin(
-            geom,
-            ST_MakePoint(%(lon)s, %(lat)s)::GEOGRAPHY,
-            %(radius_m)s
-        )
-        {time_clause}
-        AND pres < 15   -- surface-ish (< 15 dbar depth)
+        WHERE
+            -- Bounding-box pre-filter for speed (~radius_km degrees)
+            latitude  BETWEEN %(lat)s - %(deg)s AND %(lat)s + %(deg)s
+            AND longitude BETWEEN %(lon)s - %(deg)s AND %(lon)s + %(deg)s
+            {time_clause}
+            AND pres < 15   -- surface-ish (< 15 dbar depth)
         ORDER BY platform_number, DATE_TRUNC('day', time), pres ASC
     )
-    SELECT * FROM surface
+    SELECT * FROM candidate
+    WHERE km <= %(radius_km)s
     ORDER BY km ASC, time DESC
     LIMIT %(limit)s
     """
-    params: dict = {"lat": lat, "lon": lon, "radius_m": radius_m, "limit": limit}
+    # Degree approximation for bounding box pre-filter (1 deg ≈ 111 km)
+    deg_approx = radius_km / 111.0 + 1.0
+    params: dict = {
+        "lat": lat, "lon": lon,
+        "radius_km": radius_km, "deg": deg_approx,
+        "limit": limit,
+    }
     if when is not None:
         params["when"] = when
 
@@ -154,16 +164,18 @@ def depth_profile(
     target_time: Optional[datetime] = None,
     radius_deg: float = 0.05,
 ) -> List[Dict[str, Any]]:
-    """Get full depth profile (all pressure levels) for a float/cycle."""
+    """Get full depth profile (all pressure levels) for a float.
+    
+    Note: cycle_number and bbp700 columns are not available in the local
+    marine_data schema — they are excluded from the query.
+    """
     conditions = []
     params: dict = {}
 
     if platform_number:
         conditions.append("platform_number = %(pnum)s")
         params["pnum"] = platform_number
-    if cycle_number:
-        conditions.append("cycle_number = %(cycle)s")
-        params["cycle"] = cycle_number
+    # cycle_number column does not exist in local schema — skip filter
     if lat is not None and lon is not None:
         conditions.append("ABS(latitude - %(lat)s) < %(deg)s AND ABS(longitude - %(lon)s) < %(deg)s")
         params.update({"lat": lat, "lon": lon, "deg": radius_deg})
@@ -174,9 +186,11 @@ def depth_profile(
         params["t2"] = target_time + timedelta(hours=2)
 
     where = " AND ".join(conditions) if conditions else "TRUE"
+    # Columns: only those that exist in the local marine_data schema
+    # Removed: cycle_number, bbp700, data_mode (not ingested by ingestion_service.js)
     sql = f"""
-    SELECT platform_number, cycle_number, time, latitude, longitude,
-           pres AS depth_m, temp, psal, doxy, chla, nitrate, ph_in_situ_total, bbp700
+    SELECT platform_number, time, latitude, longitude,
+           pres AS depth_m, temp, psal, doxy, chla, nitrate, ph_in_situ_total
     FROM public.marine_data
     WHERE {where}
       AND pres IS NOT NULL
