@@ -35,17 +35,17 @@ async def ingest_file(netcdf_path: str) -> bool:
     """Run the pipeline for a single ARGO NetCDF file."""
     log.info(f"Starting ingestion for {netcdf_path}")
     
-    # â”€â”€ 1. Parse into Arrow Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ 1. Parse into Arrow Table ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     table = read_argo_netcdf(netcdf_path)
     if table is None or len(table) == 0:
         log.warning(f"No data parsed from {netcdf_path}")
         return False
 
-    # â”€â”€ 2. Save Parquet Archive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ 2. Save Parquet Archive ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     filename = Path(netcdf_path).stem
     save_parquet(table, settings.data_parquet_dir, filename)
 
-    # â”€â”€ 3. Load into PostgreSQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ 3. Load into PostgreSQL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # We use psycopg's COPY for blazing fast bulk inserts
     pool = get_pool()
     
@@ -99,7 +99,7 @@ async def ingest_file(netcdf_path: str) -> bool:
             
             inserted = cur.rowcount
             
-            # â”€â”€ 4. Update Float Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # ━━ 4. Update Float Registry ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             platforms = df['platform_number'].unique()
             for p in platforms:
                 p_df = df[df['platform_number'] == p]
@@ -126,7 +126,7 @@ async def ingest_file(netcdf_path: str) -> bool:
             
             conn.commit()
 
-            # â”€â”€ 5. Add to Knowledge Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # ━━ 5. Add to Knowledge Graph ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             # (Deferred operation usually, but we register the float now)
             from src.memory.knowledge_graph import add_float_node  # type: ignore
             from src.utils.geo import classify_region  # type: ignore

@@ -33,7 +33,7 @@ from src.utils.geo import city_lookup, infer_coast_from_name  # type: ignore
 from src.observability.logger import PipelineTrace  # type: ignore
 
 
-# â”€â”€ Relay widening (retry with relaxed constraints) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Relay widening (retry with relaxed constraints) ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def _relax_sql(sql: str) -> str:
     """Widen time/tolerance windows on retry."""
     import re
@@ -50,7 +50,7 @@ def _relax_sql(sql: str) -> str:
     return out
 
 
-# â”€â”€ Markdown table renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Markdown table renderer ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 def _mk_table(rows: List[Dict[str, Any]], max_rows: int = 10) -> str:
     if not rows:
         return "_No rows returned._"
@@ -95,20 +95,24 @@ async def answer(
     """
     limit = limit or settings.sql_max_rows
 
-    # â”€â”€ Retry/relax path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ Retry/relax path ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     if prior_sql:
         sql = extract_sql(prior_sql) or prior_sql.strip()
         sql_relaxed = _relax_sql(sql)
         if trace:
             trace.log("SQL_EXEC", f"Re-running relaxed SQL", sql="".join(islice(sql_relaxed, 120)))
         rows = run_sql(sql_relaxed, limit=limit)
+        import asyncio
+        # Parallelize narration (LLM) and viz build (CPU)
+        prose_task = narrate_results(question, sql_relaxed, _preview_json(rows))
         viz = build_viz_specs(rows, question)
-        prose = await narrate_results(question, sql_relaxed, _preview_json(rows))
+        prose = await prose_task
+        
         md = _format_response(prose, sql_relaxed, rows)
         return {"answer_markdown": md, "sql": sql_relaxed, "rows": rows,
                 "viz_specs": viz, "float_ids": _float_ids(rows)}
 
-    # â”€â”€ Step 1: Generate SQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ Step 1: Generate SQL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     if trace:
         trace.log("SQL_GEN", f"Generating SQL via {settings.ollama_sql_model}")
     raw_sql = await generate_sql(question, history=history_str)
@@ -121,24 +125,26 @@ async def answer(
     if trace:
         trace.log("SQL_GEN", f"Extracted SQL: {''.join(islice(sql, 80))}...", sql=sql)
 
-    # â”€â”€ Step 2: Execute â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ Step 2: Execute ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     if trace:
         trace.log("SQL_EXEC", "Executing on PostgreSQL")
     rows = run_sql(sql, limit=limit)
     if trace:
         trace.log("SQL_EXEC", f"{len(rows)} rows returned", row_count=len(rows))
 
-    # â”€â”€ Step 3: Viz specs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ━━ Step 3: Viz specs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    import asyncio
+    # Parallelize narration and viz specs
+    prose_task = narrate_results(question, sql, _preview_json(rows))
     viz = build_viz_specs(rows, question)
+    
     if trace:
         trace.log("RESPONSE", f"Chart type: {viz.get('chart_type')} | Map points: {len((viz.get('map_data') or {}).get('points', []))}")
-
-    # â”€â”€ Step 4: Narrate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if trace:
         trace.log("NARRATE", f"Narrating with {settings.ollama_narrate_model}")
-    prose = await narrate_results(question, sql, _preview_json(rows))
+    
+    prose = await prose_task
     if trace:
-        trace.log("NARRATE", f"Narration: {prose}")
+        trace.log("NARRATE", f"Narration: {prose[:120]}...")
 
     md = _format_response(prose, sql, rows)
     return {

@@ -38,7 +38,7 @@ from src.observability.pipeline_log import store_trace, get_trace  # type: ignor
 
 router = APIRouter()
 
-# â”€â”€ In-process trace store (most recent 500 per session) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ In-process trace store (most recent 500 per session) ━━━━━━━━━━━━━━━━━━━━━
 _LAST_SQL: Dict[str, str] = {}
 _LAST_ROWS: Dict[str, list] = {}
 
@@ -147,12 +147,12 @@ async def chat(inp: ChatIn):
     history  = build_history_prompt(session, last_n=4)
 
     with pipeline_span(trace_id, q) as trace:
-        # â”€â”€ Fetch User Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ Fetch User Preferences ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         prefs = get_user_preferences(session)
         if prefs and trace:
             trace.log("USER_PREFS", f"Loaded preferences for {session}", prefs=prefs)
 
-        # â”€â”€ 0) Retry trigger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 0) Retry trigger ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if q.lower().startswith("retry"):
             prev_sql = _LAST_SQL.get(session)
             if not prev_sql:
@@ -160,12 +160,20 @@ async def chat(inp: ChatIn):
             result = await sql_rag_chain.answer(q, prior_sql=prev_sql, trace=trace)
             _LAST_SQL[session] = result.get("sql") or prev_sql
             _LAST_ROWS[session] = result.get("rows") or []
-            append_message(session, "assistant", result["answer_markdown"])
-            return ChatOut(ok=True, **{k: result.get(k) for k in  # type: ignore
-                           ["answer_markdown","sql","rows","viz_specs","float_ids"]},
-                           intent="RETRY", trace_id=trace_id)
+            append_message(session, "assistant", result.get("answer_markdown", ""))
+            
+            return ChatOut(
+                ok=True,
+                answer_markdown=result.get("answer_markdown"),
+                sql=result.get("sql"),
+                rows=result.get("rows"), 
+                viz_specs=result.get("viz_specs"),
+                float_ids=result.get("float_ids"),
+                intent="RETRY",
+                trace_id=trace_id
+            )
 
-        # â”€â”€ 1) Smalltalk fast path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 1) Smalltalk fast path ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         st = _smalltalk(q)
         if st:
             trace.log("INTENT", "SMALLTALK")
@@ -173,7 +181,7 @@ async def chat(inp: ChatIn):
             append_message(session, "assistant", st)
             return ChatOut(ok=True, answer_markdown=st, intent="SMALLTALK", trace_id=trace_id)
 
-        # â”€â”€ 2) Intent detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 2) Intent detection ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         intent = detect_intent_fast(q)
         if not intent:
             from src.llm.ollama_client import rewrite_query  # type: ignore
@@ -189,7 +197,7 @@ async def chat(inp: ChatIn):
 
         result: Dict[str, Any] = {}
 
-        # â”€â”€ 3) NEAREST_FLOAT path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 3) NEAREST_FLOAT path ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if intent == "NEAREST_FLOAT" and not inp.force_sql:
             anchor = _extract_latlon(q)
             if not anchor:
@@ -215,13 +223,13 @@ async def chat(inp: ChatIn):
                 result = {"answer_markdown": md, "sql": None, "rows": rows,
                           "viz_specs": viz, "float_ids": [str(r.get("platform_number","")) for r in rows[:5]]}
 
-        # â”€â”€ 4) MULTI_HOP decomposition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 4) MULTI_HOP decomposition ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if not result and intent == "MULTI_HOP":
             trace.log("DECOMPOSE", "Decomposing multi-hop query")
             decomposed, subqs = await maybe_decompose(q)
             if decomposed:
                 trace.log("DECOMPOSE", f"Split into {len(subqs)} sub-queries", subqueries=subqs)
-                sub_answers = []
+                sub_answers: List[Dict[str, Any]] = []
                 for sq in subqs:
                     sq_intent = detect_intent_fast(sq)
                     if sq_intent == "NEAREST_FLOAT":
@@ -231,17 +239,17 @@ async def chat(inp: ChatIn):
                     sub_answers.append(sub_r)
                 result = merge_multi_hop_answers(sub_answers, q)
 
-        # â”€â”€ 5) SEMANTIC path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 5) SEMANTIC path ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if not result and intent == "SEMANTIC":
             trace.log("VECTOR", "Routing to semantic RAG chain")
             result = await rag_chain.answer(q, trace=trace)
 
-        # â”€â”€ 6) SQL_DATA path (default) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 6) SQL_DATA path (default) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if not result:
             trace.log("SQL_GEN", "Routing to SQL RAG chain")
             result = await sql_rag_chain.answer(q, history_str=history, trace=trace)
 
-        # â”€â”€ 7) Store trace + session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ 7) Store trace + session ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         _LAST_SQL[session]  = result.get("sql") or ""
         _LAST_ROWS[session] = result.get("rows") or []
         append_message(session, "assistant", result.get("answer_markdown",""))
@@ -259,13 +267,15 @@ async def chat(inp: ChatIn):
         )
 
 
-def _fmt_float_table(rows: list) -> str:
+def _fmt_float_table(rows: List[Dict[str, Any]]) -> str:
     if not rows:
         return "_No floats found in range._"
-    hdr  = "| Float | Time | Lat | Lon | Dist (km) | Temp Â°C | Salinity PSU |\n"
+    hdr  = "| Float | Time | Lat | Lon | Dist (km) | Temp °C | Salinity PSU |\n"
     hdr += "|---|---|---:|---:|---:|---:|---:|\n"
     body = []
-    for r in rows[:8]:
+    # Explicit slice to satisfy linter on list-like objects
+    chunk = list(rows)[:8]
+    for r in chunk:
         body.append(
             f"| {r.get('platform_number','')} | {str(r.get('time',''))[:16]} | "
             f"{float(r.get('latitude',0)):.3f} | {float(r.get('longitude',0)):.3f} | "

@@ -35,7 +35,7 @@ from qdrant_client.models import (  # type: ignore
 from src.config import settings  # type: ignore
 from src.llm.ollama_client import embed  # type: ignore
 
-# â”€â”€ Qdrant client (lazy singleton) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Qdrant client (lazy singleton) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _qdrant: Optional[QdrantClient] = None
 
 
@@ -50,7 +50,7 @@ def get_qdrant() -> QdrantClient:
     return _qdrant
 
 
-# â”€â”€ In-memory BM25 corpus (refreshed on startup + ingestion) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ In-memory BM25 corpus (refreshed on startup + ingestion) ━━━━━━━━━━━━━━━━━
 class BM25Index:
     """
     Maintains a BM25 index over all text chunks in the Qdrant collection.
@@ -96,7 +96,7 @@ class BM25Index:
         return results
 
 
-# â”€â”€ Main retriever â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Main retriever ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class HybridRetriever:
     """
     Production hybrid retriever:
@@ -146,10 +146,10 @@ class HybridRetriever:
         top_k = top_k or settings.rag_top_k
         candidate_k = min(top_k * 3, 30)
 
-        # â”€â”€ Step 1: BM25 candidates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ Step 1: BM25 candidates ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         bm25_results = self.bm25.search(query, top_k=candidate_k)
 
-        # â”€â”€ Step 2: Vector search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ Step 2: Vector search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         query_vec = await embed([query])
         qvec = query_vec[0]
 
@@ -170,7 +170,7 @@ class HybridRetriever:
             with_payload=True,
         )
 
-        # â”€â”€ Step 3: Reciprocal Rank Fusion (RRF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ Step 3: Reciprocal Rank Fusion (RRF) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # RRF merges ranked lists without needing score normalization.
         # score(d) = Î£ 1/(k + rank_i(d)) where k=60 (standard constant)
         # WHY RRF? Because BM25 scores (0â†’âˆž) and cosine similarity (0â†’1) are
@@ -204,7 +204,7 @@ class HybridRetriever:
         )[:candidate_k]  # type: ignore
 
 
-        # â”€â”€ Step 4: LLM-based reranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ━━ Step 4: LLM-based reranking ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # WHY rerank? Because embedding similarity is asymmetric and often
         # misses complex semantic relationships.
         # we pick the top candidates from RRF and pass them to the LLM.
@@ -213,7 +213,7 @@ class HybridRetriever:
 
         return reranked
 
-# â”€â”€ Collection management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Collection management ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def ensure_collection(vector_size: int = 768):
     """Create Qdrant collection if it doesn't exist."""
     client = get_qdrant()
@@ -252,7 +252,7 @@ async def upsert_chunks(chunks: List[Dict[str, Any]]):
     )
 
 
-# â”€â”€ Singleton retriever â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ━━ Singleton retriever ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _retriever: Optional[HybridRetriever] = None
 
 

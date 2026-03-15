@@ -66,14 +66,14 @@ async def ws_chat(websocket: WebSocket):
             append_message(session, "user", q)
 
             with pipeline_span(trace_id, q) as trace:
-                # â”€â”€ Smalltalk fast path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # ━━ Smalltalk fast path ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 st = _smalltalk(q)
                 if st:
                     await _send(websocket, "token", st)
                     await _send(websocket, "done", {"trace_id": trace_id, "intent": "SMALLTALK"})
                     continue
 
-                # â”€â”€ Intent detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # ━━ Intent detection ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 intent = detect_intent_fast(q)
                 if not intent:
                     q_rw, intent = await rewrite_query(q, history)
@@ -81,12 +81,12 @@ async def ws_chat(websocket: WebSocket):
                     q = q_rw
                 await _send(websocket, "intent", intent)
 
-                # â”€â”€ Pipeline trace step events to frontend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # ━━ Pipeline trace step events to frontend ━━━━━━━━━━━━━━━━━━━━
                 await _send(websocket, "pipeline_step", {
                     "stage": "INTENT", "message": f"Intent: {intent}"
                 })
 
-                # â”€â”€ SQL / Data path with streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # ━━ SQL / Data path with streaming ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 if intent in ("SQL_DATA", "NEAREST_FLOAT", "MULTI_HOP") or not intent:
                     try:
                         # Run SQL chain (non-streaming for rows), then stream narration
@@ -123,7 +123,7 @@ async def ws_chat(websocket: WebSocket):
                     except Exception as e:
                         await _send(websocket, "error", str(e))
 
-                # â”€â”€ Semantic path with streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                # ━━ Semantic path with streaming ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 else:
                     try:
                         from src.rag.retriever import get_retriever
