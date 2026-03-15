@@ -45,3 +45,4 @@ apps/backend/chroma/
 # OS
 .DS_Store
 Thumbs.db
+.next/

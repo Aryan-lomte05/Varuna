@@ -141,25 +141,37 @@ async def embed(texts: List[str]) -> List[List[float]]:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _SQL_SCHEMA = """
-PostgreSQL table `public.marine_data` with PostGIS. Columns:
-  platform_number INT4     — float WMO identifier
-  time            TIMESTAMPTZ
-  latitude        DOUBLE PRECISION
-  longitude       DOUBLE PRECISION
-  geom            GEOGRAPHY(POINT,4326)  — use ST_DWithin for spatial queries
-  pres            DOUBLE PRECISION  — pressure dbar ≈ depth m
-  temp            DOUBLE PRECISION  — temperature °C
-  temp_qc         SMALLINT          — quality flag 0=unknown 1=good 4=bad
-  psal            DOUBLE PRECISION  — salinity PSU
-  psal_qc         SMALLINT
-  doxy            DOUBLE PRECISION  — dissolved oxygen µmol/kg
-  doxy_qc         SMALLINT
-  chla            DOUBLE PRECISION  — chlorophyll-a mg/m³
-  nitrate         DOUBLE PRECISION  — nitrate µmol/kg
-  ph_in_situ_total DOUBLE PRECISION
-  bbp700          DOUBLE PRECISION  — backscattering at 700nm
-  cycle_number    INT4
-  data_mode       CHAR(1)           — R=realtime D=delayed
+PostgreSQL table `public.marine_data` (year-partitioned: marine_data_2022, _2023, _2024, _2025, _2026).
+
+Exact columns available:
+  platform_number  INTEGER   — ARGO float WMO identifier
+  time             TIMESTAMP — observation time (UTC)
+  latitude         NUMERIC   — decimal degrees, positive = North
+  longitude        NUMERIC   — decimal degrees, positive = East
+  pres             NUMERIC   — pressure in dbar (approx. depth in metres)
+  temp             NUMERIC   — sea water temperature in °C
+  psal             NUMERIC   — practical salinity in PSU
+  doxy             NUMERIC   — dissolved oxygen in µmol/kg
+  chla             NUMERIC   — chlorophyll-a in mg/m³
+  ph_in_situ_total NUMERIC   — in-situ pH
+  nitrate          NUMERIC   — nitrate concentration in µmol/kg
+
+IMPORTANT: There is NO geom column, NO PostGIS, NO quality-control (_qc) columns,
+NO bbp700, NO cycle_number, NO data_mode.
+NEVER use ST_DWithin, ST_Distance, ST_MakePoint, or any PostGIS function.
+
+For distance/spatial queries, use the Haversine formula:
+  6371.0 * acos(
+    LEAST(1.0, GREATEST(-1.0,
+      sin(radians({target_lat})) * sin(radians(latitude))
+      + cos(radians({target_lat})) * cos(radians(latitude))
+      * cos(radians(longitude) - radians({target_lon}))
+    ))
+  ) AS km
+  Always add a bounding box pre-filter for performance:
+    latitude  BETWEEN {lat} - {deg} AND {lat} + {deg}
+    AND longitude BETWEEN {lon} - {deg} AND {lon} + {deg}
+  Then filter the CTE result with: WHERE km <= {radius_km}
 
 Ocean regions (use these exact bounds):
   Arabian Sea:    longitude BETWEEN 40 AND 75  AND latitude BETWEEN 5 AND 25
@@ -170,42 +182,39 @@ Ocean regions (use these exact bounds):
   Indian Ocean:   longitude BETWEEN 20 AND 145 AND latitude BETWEEN -60 AND 30
 
 Time windows:
-  "past N days"    → time > NOW() - INTERVAL 'N days'
-  "past N months"  → time > NOW() - INTERVAL 'N months'
-  "in 2023"        → time BETWEEN '2023-01-01' AND '2024-01-01'
-  "March 2023"     → time BETWEEN '2023-03-01' AND '2023-04-01'
-
-Spatial queries:
-  Nearest float to (lat,lon):  ST_DWithin(geom, ST_MakePoint(lon,lat)::GEOGRAPHY, radius_m)
-  Near a coordinate:            ST_Distance(geom, ST_MakePoint(lon,lat)::GEOGRAPHY) < dist_m
+  "past N days"   → time > NOW() - INTERVAL 'N days'
+  "past N months" → time > NOW() - INTERVAL 'N months'
+  "in 2023"       → time BETWEEN '2023-01-01' AND '2024-01-01'
+  "March 2023"    → time BETWEEN '2023-03-01' AND '2023-04-01'
 
 Depth profiles:
-  Use pres AS depth_m, ORDER BY pres ASC
-  For a target location: ABS(latitude-{lat})<0.05 AND ABS(longitude-{lon})<0.05
+  ORDER BY pres ASC, use pres AS depth_m
+  To target a location: ABS(latitude - {lat}) < 0.05 AND ABS(longitude - {lon}) < 0.05
 
-Extrema pattern (min/max):
+Extrema pattern:
   WITH w AS (SELECT ... WHERE <filters> AND <var> IS NOT NULL),
   m AS (SELECT MIN(<var>) AS v FROM w)
   SELECT w.platform_number, w.time, w.latitude, w.longitude, w.<var>
-  FROM w JOIN m ON w.<var>=m.v ORDER BY time DESC LIMIT 50
+  FROM w JOIN m ON w.<var> = m.v ORDER BY time DESC LIMIT 50
 
-Always include platform_number, time, latitude, longitude in SELECT.
-Always add WHERE qc flag checks (e.g. AND temp_qc NOT IN (4,9)) for quality.
-Output ONLY one valid PostgreSQL SELECT. No markdown, no explanation.
+Rules:
+  - Always include platform_number, time, latitude, longitude in SELECT.
+  - Never reference geom, ST_DWithin, ST_Distance, *_qc, bbp700, cycle_number.
+  - Output ONLY one valid PostgreSQL SELECT. No markdown, no explanation.
 """
 
 _SQL_FEWSHOTS = """
--- Example 1: Salinity profiles near equator March 2023
+-- Example 1: Salinity profiles near equator in March 2023
 SELECT platform_number, time, latitude, longitude, pres AS depth_m, psal, temp
 FROM public.marine_data
 WHERE latitude BETWEEN -5 AND 5
   AND longitude BETWEEN 40 AND 115
   AND time BETWEEN '2023-03-01' AND '2023-04-01'
-  AND psal IS NOT NULL AND psal_qc NOT IN (4,9)
+  AND psal IS NOT NULL
 ORDER BY platform_number, pres ASC
 LIMIT 500;
 
--- Example 2: Compare BGC in Arabian Sea last 6 months
+-- Example 2: Monthly BGC averages in Arabian Sea — last 6 months
 SELECT DATE_TRUNC('month', time) AS month,
        AVG(chla) AS avg_chla, AVG(doxy) AS avg_doxy,
        AVG(nitrate) AS avg_nitrate, COUNT(*) AS obs
@@ -215,25 +224,47 @@ WHERE longitude BETWEEN 40 AND 75 AND latitude BETWEEN 5 AND 25
   AND (chla IS NOT NULL OR doxy IS NOT NULL OR nitrate IS NOT NULL)
 GROUP BY 1 ORDER BY 1;
 
--- Example 3: Nearest floats to Mumbai (19.08, 72.88) past 90 days
-SELECT platform_number, time, latitude, longitude, temp, psal,
-       ST_Distance(geom, ST_MakePoint(72.88, 19.08)::GEOGRAPHY)/1000 AS km
-FROM public.marine_data
-WHERE ST_DWithin(geom, ST_MakePoint(72.88, 19.08)::GEOGRAPHY, 500000)
-  AND time > NOW() - INTERVAL '90 days'
-  AND pres < 20
+-- Example 3: Nearest floats to Mumbai (lat=19.08, lon=72.88) — past 90 days
+-- Haversine distance — no PostGIS required
+WITH candidates AS (
+    SELECT platform_number, time, latitude, longitude, temp, psal,
+           6371.0 * acos(
+               LEAST(1.0, GREATEST(-1.0,
+                   sin(radians(19.08)) * sin(radians(latitude))
+                   + cos(radians(19.08)) * cos(radians(latitude))
+                   * cos(radians(longitude) - radians(72.88))
+               ))
+           ) AS km
+    FROM public.marine_data
+    WHERE latitude BETWEEN 16.58 AND 21.58
+      AND longitude BETWEEN 70.38 AND 75.38
+      AND time > NOW() - INTERVAL '90 days'
+      AND pres < 20
+)
+SELECT * FROM candidates
+WHERE km <= 300
 ORDER BY km ASC, time DESC
 LIMIT 10;
 
--- Example 4: Temperature trend 2022 in Indian Ocean
+-- Example 4: Monthly temperature trend in Indian Ocean during 2022
 SELECT DATE_TRUNC('month', time) AS month,
        AVG(temp) AS avg_temp, STDDEV(temp) AS std_temp,
        MIN(temp) AS min_temp, MAX(temp) AS max_temp
 FROM public.marine_data
 WHERE longitude BETWEEN 20 AND 145 AND latitude BETWEEN -60 AND 30
   AND time BETWEEN '2022-01-01' AND '2023-01-01'
-  AND temp IS NOT NULL AND temp_qc NOT IN (4,9)
+  AND temp IS NOT NULL
 GROUP BY 1 ORDER BY 1;
+
+-- Example 5: Full depth profile for a specific float
+SELECT platform_number, time, latitude, longitude,
+       pres AS depth_m, temp, psal, doxy, chla, nitrate, ph_in_situ_total
+FROM public.marine_data
+WHERE platform_number = 1902367
+  AND time > NOW() - INTERVAL '30 days'
+  AND pres IS NOT NULL
+ORDER BY pres ASC
+LIMIT 500;
 """
 
 
