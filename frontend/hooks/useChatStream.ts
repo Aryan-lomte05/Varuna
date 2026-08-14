@@ -127,13 +127,10 @@ export function useChatStream() {
     };
   }, [connect]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!content.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        setError("WebSocket is not connected. Is the Python Backend running?");
-      }
-      return;
-    }
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return;
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -141,9 +138,8 @@ export function useChatStream() {
       content
     };
 
-    // Add user message and a blank assistant message that will be populated via stream
     setMessages(prev => [
-      ...prev, 
+      ...prev,
       newMessage,
       {
         id: (Date.now() + 1).toString(),
@@ -152,16 +148,57 @@ export function useChatStream() {
         isStreaming: true
       }
     ]);
-    
+
     setInput('');
     setIsTyping(true);
     setError(null);
 
-    // Send to Gateway -> Python Backend
-    wsRef.current.send(JSON.stringify({
-      question: content,
-      session: "default" // TODO: dynamic session
-    }));
+    // Try WebSocket delivery if connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        question: content,
+        session: "default"
+      }));
+      return;
+    }
+
+    // Fallback to HTTP REST endpoint if WebSocket is offline/unavailable
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: content, session: "default" })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (!last || last.role !== 'assistant') return prev;
+          return [
+            ...prev.slice(0, -1),
+            {
+              ...last,
+              content: data.answer_markdown || "Analysis complete.",
+              isStreaming: false,
+              trace_id: data.trace_id,
+              metadata: {
+                intent: data.intent,
+                sql: data.sql,
+                rows: data.rows,
+                viz_specs: data.viz_specs,
+                float_ids: data.float_ids
+              }
+            }
+          ];
+        });
+      } else {
+        setError(data.error || "Failed to process query.");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to connect to backend service.");
+    } finally {
+      setIsTyping(false);
+    }
   }, [messages]);
 
   return {

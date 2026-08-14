@@ -186,6 +186,24 @@ export function ChatPanel() {
                   </div>
                 )}
 
+                {/* Data Export Toolbar */}
+                {m.metadata?.sql && (
+                  <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[9px] font-mono uppercase text-zinc-500 mr-1">Export:</span>
+                    {["csv", "ascii", "netcdf", "json"].map((fmt) => (
+                      <a
+                        key={fmt}
+                        href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/export?sql=${encodeURIComponent(m.metadata?.sql || "")}&format=${fmt}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-0.5 rounded text-[9px] font-mono uppercase bg-white/5 hover:bg-accent/20 border border-white/10 hover:border-accent/40 text-zinc-400 hover:text-accent transition-colors"
+                      >
+                        .{fmt.toUpperCase()}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
                 {/* Intent + Trace row */}
                 {m.metadata?.intent && (
                   <div className="mt-2 flex items-center gap-2 flex-wrap">
