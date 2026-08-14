@@ -1,20 +1,79 @@
 # VARUNA Team Workstream Matrix & Responsibility Index
 
-| Member | Name | Role | Primary File & System Responsibilities |
-|---|---|---|---|
-| **M1** | **[Aryan Lomte (Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md)** | AI Systems Architect, Team Lead | `src/agents/orchestrator.py`, `src/agents/anomaly_agent.py`, `src/agents/synthesizer_agent.py`, `src/api/routes.py` |
-| **M2** | **[Aditya Yadav](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aditya_Yadav.md)** | Data Engineer & Backend Lead | `src/ingestion/pipeline.py`, `src/ingestion/seed_biodiversity.py`, `src/database/postgres.py`, NetCDF HPC ETL |
-| **M3** | **[Sahil Shah](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md)** | AI/LLM Systems Engineer | `src/llm/openrouter_client.py`, `src/chains/sql_rag_chain.py`, `src/database/qdrant.py`, Sub-Agents |
-| **M4** | **[Advay Chavan](file:///e:/Hackathons/floatchatai-main/docs/assignments/Advay_Chavan.md)** | Frontend Full-Stack Lead | `frontend/app/page.tsx`, `frontend/components/ChatPanel.tsx`, `frontend/components/AgentGraph.tsx`, 3D Globe |
-| **M5** | **[Netal Gupta](file:///e:/Hackathons/floatchatai-main/docs/assignments/Netal_Gupta.md)** | Geospatial Visualization Specialist | `frontend/components/OceanMap.tsx`, `frontend/components/AnomalyAlerts.tsx`, Deck.gl Spatial Layers |
-| **M6** | **[Kanishka Sahal](file:///e:/Hackathons/floatchatai-main/docs/assignments/Kanishka_Sahal.md)** | Marine Analytics & Presentation Lead | `frontend/components/CrossDomainExplorer.tsx`, `frontend/components/Charts/`, SIH Pitch Deck & Video |
+> **Governing Purpose**: Master operational index detailing exact review requirements, critical codebase flags, and build deliverables for every team member.
 
 ---
 
-## Individual Assignment Blueprints
-- [Aryan Lomte — Lead Architecture & Multi-Agent DAG](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md)
-- [Aditya Yadav — NetCDF HPC Ingestion & PostGIS Schema](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aditya_Yadav.md)
-- [Sahil Shah — OpenRouter Nemotron-550B & Vector Engine](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md)
-- [Advay Chavan — App Shell, AgentGraph & Chat Experience](file:///e:/Hackathons/floatchatai-main/docs/assignments/Advay_Chavan.md)
-- [Netal Gupta — OceanMap Situational Center & Anomaly Feed](file:///e:/Hackathons/floatchatai-main/docs/assignments/Netal_Gupta.md)
-- [Kanishka Sahal — CrossDomainExplorer & Scientific Charts](file:///e:/Hackathons/floatchatai-main/docs/assignments/Kanishka_Sahal.md)
+## 1. 🔍 Critical Codebase Flags (High-Priority Review Items)
+
+During deep testing across the backend modules, the following high-priority flags were identified:
+
+```
+┌──────────────────────────────────────┬──────────────────────┬────────────────────────────────────────────────────────────────────────┐
+│ Flagged Module                       │ Assigned Member      │ Critical Finding & Required Action                                     │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/memory/conversation.py           │ Sahil Shah (M3)      │ [HIGH REVIEW] Top-level `import redis` blocks imports without Redis.   │
+│                                      │                      │ Action: Wrap with resilient in-process dictionary fallback.            │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/llm/embedder.py                  │ Sahil Shah (M3)      │ [HIGH REVIEW] MD5 hash fallback produces orthogonal dummy vectors.     │
+│                                      │                      │ Action: Wire `openrouter_client.embed_text()` to nomic-embed-text.     │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/chains/sql_rag_chain.py & rag_   │ Sahil Shah (M3)      │ [HEAVY REVIEW] Stale imports from `src.llm.ollama_client`.             │
+│ chain.py                             │                      │ Action: Migrate all generation paths to `src.llm.openrouter_client`.   │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/database/postgres.py             │ Aditya Yadav (M2)    │ [HIGH REVIEW] Missing Darwin Core DDL & PostGIS lateral spatial join.  │
+│                                      │                      │ Action: Implement `init_biodiversity_schema()` & `correlate_species`.  │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/ingestion/pipeline.py & reader   │ Aditya Yadav (M2)    │ [HEAVY REVIEW] Verify PyArrow dimension slicing & QC bitmasking [1,2,5,8]│
+│                                      │                      │ Action: Validate end-to-end against real/mock NetCDF profile arrays.   │
+└──────────────────────────────────────┴──────────────────────┴────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. 👥 Master Team Workstream Matrix
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       VARUNA WORKSTREAM MATRIX                                             │
+├───────────────────┬───────────────────────────────────────────┬─────────────────────────────────────────────┤
+│ Member            │ 🔍 What to REVIEW (Existing Code)         │ 🔨 What to BUILD (New Code)                 │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M1: Aryan Lomte   │ • FastAPI application lifecycle (app.py)  │ • Multi-Agent Task DAG (orchestrator.py)   │
+│ (Lead)            │ • Observability & tracer pipelines        │ • Proactive Anomaly Agent (anomaly_agent.py)│
+│                   │ • WebSocket streaming handler (ws.py)     │ • Provenance Synthesizer (synthesizer.py)   │
+│                   │                                           │ • Gateway Routes (/agent/chat, /anomalies)  │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M2: Aditya Yadav  │ • NetCDF extraction (netcdf_reader.py)    │ • Darwin Core Seeder (seed_biodiversity.py) │
+│ (Backend / Data)  │ • Batch Ingestion Pipeline (pipeline.py)  │ • Biodiversity Schema & GIST Spatial Index  │
+│                   │ • DuckDB Parquet Reader (duckdb_client.py)│ • PostGIS Lateral Join (correlate_species)  │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M3: Sahil Shah    │ • SQL Chain & RAG Chain (chains/)         │ • OpenRouter Client (openrouter_client.py)  │
+│ (Backend AI)      │ • Text Embedder & Hash Vectorizer         │ • NL→SQL Sub-Agent (sql_gen_agent.py)       │
+│                   │ • Redis Session Memory (conversation.py)  │ • Hybrid Retrieval Sub-Agent (retrieval.py) │
+│                   │ • Qdrant Collection Initializer           │ • Qdrant bio_knowledge Collection           │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M4: Advay Chavan  │ • App Shell & HUD Overlays (page.tsx)     │ • Live Task DAG Visualizer (AgentGraph.tsx) │
+│ (Frontend Full)   │ • ChatPanel message history & state       │ • Inspectable <> Show SQL Drawer            │
+│                   │ • useChatStream hook response parsing     │ • Operational 4-View Switcher in DockNav    │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M5: Netal Gupta   │ • Deck.gl Scatterplot Canvas (OceanMap)   │ • Early-Warning Feed (AnomalyAlerts.tsx)    │
+│ (Geospatial)      │ • 90-Day Drift Vectors (TrajectoryLayer)  │ • Vertical Depth Slicer (0m to 2000m)       │
+│                   │ • Float Marker Popups (FloatMap.tsx)      │ • CMLRE Biodiversity Deck.gl Layer          │
+├───────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ M6: Kanishka Sahal│ • 15+ Oceanographic Charts (AnalysisHub)  │ • INCOIS ⇄ CMLRE Explorer (CrossDomain.tsx) │
+│ (Analytics / Pres)│ • TSIsopycnals.tsx & HovmollerDiagram.tsx │ • Fill 4 Chart Stubs (CrossCorrelogram etc) │
+│                   │ • DepthProfile.tsx & Surface3D.tsx        │ • SIH 9-Slide Pitch Deck & 5-min Demo Video │
+└───────────────────┴───────────────────────────────────────────┴─────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Individual Assignment Blueprints
+
+- [**Aryan Lomte** (Lead & AI Systems Architect)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md)
+- [**Aditya Yadav** (Data Engineer & Backend Infrastructure Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aditya_Yadav.md)
+- [**Sahil Shah** (Backend AI & LLM Systems Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md)
+- [**Advay Chavan** (Frontend Full-Stack & UI Systems Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Advay_Chavan.md)
+- [**Netal Gupta** (Geospatial Systems & Visualization Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Netal_Gupta.md)
+- [**Kanishka Sahal** (Marine Analytics & Presentation Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Kanishka_Sahal.md)

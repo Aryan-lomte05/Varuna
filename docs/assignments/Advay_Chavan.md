@@ -13,24 +13,30 @@ Member 4 is responsible for the interactive command center experience of VARUNA:
 
 ---
 
-## 2. File Ownership & Code Contracts
+## 2. Work Allocation: What to Review vs. What to Build
 
-### Primary Files Owned
-- `frontend/app/page.tsx` [EXTEND - VARUNA rebrand, view switcher, HUD overlays]
-- `frontend/app/layout.tsx` [MAINTAIN - Root HTML metadata, custom fonts]
-- `frontend/components/ChatPanel.tsx` [EXTEND - Agent DAG rendering, copyable SQL blocks]
-- `frontend/components/AgentGraph.tsx` [NEW - Interactive DAG visualizer]
-- `frontend/components/Globe/OceanGlobe.tsx` [MAINTAIN - Three.js WebGL globe]
-- `frontend/components/DebugPanel/` [MAINTAIN - Pipeline trace inspector]
-- `frontend/hooks/useChatStream.ts` [EXTEND - Agent trace data streaming]
+### 🔍 What to REVIEW (Existing Code — Requires Heavy/High Critical Review)
+1. **`frontend/app/page.tsx` [HEAVY REVIEW]**:
+   - Rebrand header from `FLOAT_CHAT.v2` to **`VARUNA` — Marine Ecosystem Intelligence Platform**.
+   - Add state switching for 4 operational modes: `MAP`, `ANALYSIS`, `ALERTS`, `BIODIVERSITY`.
+   - Ensure background map blur transition behaves smoothly during tab switches without WebGL context loss.
+2. **`frontend/components/ChatPanel.tsx` [HIGH REVIEW]**:
+   - Upgrade message renderer to support multi-agent responses with embedded `AgentGraph` execution trees.
+   - Add `<> Show Generated SQL` inspectable drawer with 1-click query copy and formatted markdown tables.
+3. **`frontend/hooks/useChatStream.ts` [HIGH REVIEW]**:
+   - Update streaming hook state interface to parse `agent_trace` payloads and error responses from `/api/v1/agent/chat`.
+4. **`frontend/components/ui/DockNav.tsx` [HIGH REVIEW]**:
+   - Add navigation icons for `ALERTS` and `BIODIVERSITY` views.
+5. **`frontend/components/Globe/OceanGlobe.tsx` [HIGH REVIEW]**:
+   - Verify 60 FPS WebGL rendering and dynamic camera transitions to the Indian Ocean basin.
+
+### 🔨 What to BUILD (New Code)
+1. **`frontend/components/AgentGraph.tsx` [COMPLETELY NEW]**:
+   - Build animated Framer Motion DAG visualization showing Planner decomposition, sub-agent dispatches, parallel execution timings, and completion checkmarks.
 
 ---
 
 ## 3. Technical Specifications & Implementation Blueprints
-
-### 3.1 Live Agent Execution DAG Visualizer (`frontend/components/AgentGraph.tsx`)
-
-When the backend returns an `agent_trace` from `/api/v1/agent/chat`, the `AgentGraph` renders the live execution workflow:
 
 ```mermaid
 graph TD
@@ -53,34 +59,6 @@ graph TD
     Task4 --> Synthesizer["Synthesizer Agent<br/>540ms"]:::done
     Task5 --> Synthesizer
 ```
-
-#### Component Interface (`AgentGraph.tsx`):
-```tsx
-export interface AgentTaskStep {
-  task_id: string;
-  agent_type: "PLANNER" | "SQL_GEN" | "RETRIEVAL" | "BIODIVERSITY" | "ANOMALY" | "COMPARISON" | "SYNTHESIZER";
-  description: string;
-  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
-  duration_ms?: number;
-  result_summary?: string;
-  dependencies?: string[];
-}
-
-export interface AgentGraphProps {
-  planId?: string;
-  steps: AgentTaskStep[];
-  isExecuting?: boolean;
-}
-```
-
----
-
-### 3.2 Design System Tokens & Fluid Glassmorphism
-
-Advay ensures compliance with VARUNA's strict, award-winning dark ocean design system (in `globals.css`):
-- **Liquid Glass (`.glass`)**: `backdrop-filter: blur(20px) saturate(180%)`, physical edge light refraction (`inset 0 1px 0 rgba(255,255,255,0.08)`).
-- **Zero AI Slop**: No generic floating purple gradients. Every visual element reflects ocean physics (depth stratification, bioluminescent green `#00FFC6`, tropical aqua `#2EE6C6`, deep abyss `#051421`).
-- **Micro-Animations**: Framer Motion spring physics on dock navigation, skeleton shimmers during streaming, kinetic marquee on status bar.
 
 ---
 

@@ -18,6 +18,31 @@
 
 ---
 
+## 1.1 🔍 Critical Codebase Flags (High/Heavy Review Items)
+
+```
+┌──────────────────────────────────────┬──────────────────────┬────────────────────────────────────────────────────────────────────────┐
+│ Flagged Module                       │ Assigned Member      │ Critical Finding & Required Action                                     │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/memory/conversation.py           │ Sahil Shah (M3)      │ [HIGH REVIEW] Top-level `import redis` blocks imports without Redis.   │
+│                                      │                      │ Action: Wrap with resilient in-process dictionary fallback.            │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/llm/embedder.py                  │ Sahil Shah (M3)      │ [HIGH REVIEW] MD5 hash fallback produces orthogonal dummy vectors.     │
+│                                      │                      │ Action: Wire `openrouter_client.embed_text()` to nomic-embed-text.     │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/chains/sql_rag_chain.py & rag_   │ Sahil Shah (M3)      │ [HEAVY REVIEW] Stale imports from `src.llm.ollama_client`.             │
+│ chain.py                             │                      │ Action: Migrate all generation paths to `src.llm.openrouter_client`.   │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/database/postgres.py             │ Aditya Yadav (M2)    │ [HIGH REVIEW] Missing Darwin Core DDL & PostGIS lateral spatial join.  │
+│                                      │                      │ Action: Implement `init_biodiversity_schema()` & `correlate_species`.  │
+├──────────────────────────────────────┼──────────────────────┼────────────────────────────────────────────────────────────────────────┤
+│ src/ingestion/pipeline.py & reader   │ Aditya Yadav (M2)    │ [HEAVY REVIEW] Verify PyArrow dimension slicing & QC bitmasking [1,2,5,8]│
+│                                      │                      │ Action: Validate end-to-end against real/mock NetCDF profile arrays.   │
+└──────────────────────────────────────┴──────────────────────┴────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 2. Backend Subsystems: Cellular Audit
 
 ### 2.1 Agents & Multi-Agent Mesh (`backend/src/agents/`)

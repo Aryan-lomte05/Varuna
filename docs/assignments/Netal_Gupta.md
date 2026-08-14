@@ -13,22 +13,25 @@ Member 5 is responsible for the geospatial situational awareness center of VARUN
 
 ---
 
-## 2. File Ownership & Code Contracts
+## 2. Work Allocation: What to Review vs. What to Build
 
-### Primary Files Owned
-- `frontend/components/OceanMap.tsx` [EXTEND - Deck.gl multi-layer support, species toggle]
-- `frontend/components/AnomalyAlerts.tsx` [NEW - Proactive early-warning feed]
-- `frontend/components/Map/FloatMap.tsx` [MAINTAIN - Interactive float marker inspector]
-- `frontend/components/Map/TrajectoryLayer.tsx` [MAINTAIN - PathLayer drift tracks]
-- `frontend/components/ui/DataStatusBar.tsx` [MAINTAIN - Live fleet telemetry bar]
+### 🔍 What to REVIEW (Existing Code — Requires Heavy/High Critical Review)
+1. **`frontend/components/OceanMap.tsx` [HEAVY REVIEW]**:
+   - Verify Deck.gl `ScatterplotLayer` performance under 3,800+ float nodes.
+   - Implement vertical depth scrubber slider ($0\text{m} \to 2000\text{m}$) filtering measurements by depth layer.
+   - Add toggleable CMLRE species observation layer with taxonomic color scales.
+2. **`frontend/components/Map/TrajectoryLayer.tsx` [HIGH REVIEW]**:
+   - Verify animated gradient drift paths for tracked ARGO floats and check for memory leaks on long trajectories.
+3. **`frontend/components/Map/FloatMap.tsx` [HIGH REVIEW]**:
+   - Inspect popup marker layout to ensure clean in-situ temperature, salinity, and BGC metric rendering.
+
+### 🔨 What to BUILD (New Code)
+1. **`frontend/components/AnomalyAlerts.tsx` [COMPLETELY NEW]**:
+   - Early-Warning Situational Room with card feeds of active Marine Heatwaves (Hobday 2016), climatological baseline curves, vulnerable species impact badges, and 1-click fisheries advisory export.
 
 ---
 
 ## 3. Technical Specifications & Implementation Blueprints
-
-### 3.1 Proactive Anomaly Alert Center (`frontend/components/AnomalyAlerts.tsx`)
-
-The early-warning dashboard displays real-time ecological and physical anomalies flagged by the background Anomaly Agent:
 
 ```mermaid
 graph TD
@@ -37,7 +40,7 @@ graph TD
     
     Parse --> Card1[Critical Alert: Arabian Sea MHW +3.4°C]
     Parse --> Card2[High Alert: Gulf of Mannar Coral Thermal Stress]
-    Parse --> Card3[Moderate Alert: Malabar Hypoxia Zone DOXY < 45]
+    Parse --> Card3[Moderate Alert: Malabar Hypoxia Zone DOXY < 40]
     
     Card1 --> Impact1[Species Impact: Sardinella longiceps range retreat]
     Card1 --> Advisory1[Fisheries Advisory: Offshore catch advisory dispatched]
@@ -45,61 +48,6 @@ graph TD
     Card2 --> Impact2[Species Impact: Acropora millepora bleaching risk 85%]
     Card2 --> Advisory2[Conservation Advisory: MPAs coral monitoring active]
 ```
-
-#### Alert Card Data Structure:
-```tsx
-export interface AnomalyAlert {
-  id: number;
-  alert_type: "MARINE_HEATWAVE" | "HYPOXIA" | "CHLOROPHYLL_BLOOM" | "THERMAL_DISRUPTION";
-  severity: "CRITICAL" | "HIGH" | "MODERATE" | "ADVISORY";
-  ocean_basin: string;
-  lat_range: [number, number];
-  lon_range: [number, number];
-  metric_value: number;       // e.g. +3.4 °C anomaly
-  baseline_value: number;     // e.g. 28.1 °C climatological mean
-  detected_at: string;
-  affected_species: Array<{
-    scientific_name: string;
-    common_name: string;
-    vulnerability_note: string;
-  }>;
-  policy_advisory: string;
-}
-```
-
----
-
-### 3.2 Dual-Layer Geospatial Rendering (Deck.gl in `OceanMap.tsx`)
-
-`OceanMap.tsx` renders simultaneous, hardware-accelerated layers:
-1. **ARGO Float Fleet Layer**:
-   ```typescript
-   new ScatterplotLayer({
-     id: 'argo-fleet-layer',
-     data: floatData,
-     getPosition: (d: any) => [d.last_lon, d.last_lat],
-     getFillColor: [46, 230, 198, 200],  // Tropical Aqua
-     getRadius: 8000,                    // 8km radius in meters
-     radiusMinPixels: 4,
-     radiusMaxPixels: 14,
-     pickable: true,
-     onClick: (info) => onSelectFloat(info.object)
-   })
-   ```
-2. **CMLRE Biodiversity Layer (Toggleable)**:
-   ```typescript
-   new ScatterplotLayer({
-     id: 'cmlre-biodiversity-layer',
-     data: speciesData,
-     getPosition: (d: any) => [d.decimal_longitude, d.decimal_latitude],
-     getFillColor: (d: any) => getTaxonColor(d.phylum), // Coral=Pink, Fish=Cyan, Turtle=Emerald
-     getRadius: (d: any) => Math.max(5000, Math.min(25000, d.individual_count * 2000)),
-     radiusMinPixels: 5,
-     radiusMaxPixels: 20,
-     pickable: true,
-     onClick: (info) => onSelectSpecies(info.object)
-   })
-   ```
 
 ---
 

@@ -13,24 +13,32 @@ Member 6 is responsible for translating complex oceanographic and marine biologi
 
 ---
 
-## 2. File Ownership & Code Contracts
+## 2. Work Allocation: What to Review vs. What to Build
 
-### Primary Files Owned
-- `frontend/components/CrossDomainExplorer.tsx` [NEW - INCOIS x CMLRE Explorer]
-- `frontend/components/AnalysisHub.tsx` [MAINTAIN - Scientific chart dashboard]
-- `frontend/components/Charts/` [MAINTAIN & COMPLETE ALL 15 CHART MODULES]
-  - `TSIsopycnals.tsx`, `HovmollerDiagram.tsx`, `DepthProfile.tsx`, `Surface3D.tsx`, `AnomalySeries.tsx`
-  - `CrossCorrelogram.tsx` [FILL STUB]
-  - `ObsDensityMap.tsx` [FILL STUB]
-  - `ProfileCount.tsx` [FILL STUB]
-  - `QCHistogram.tsx` [FILL STUB]
-- `docs/assignments/` & Presentation Slides [GOVERN & PRODUCE]
+### 🔍 What to REVIEW (Existing Code — Requires Heavy/High Critical Review)
+1. **`frontend/components/AnalysisHub.tsx` [HIGH REVIEW]**:
+   - Verify layout grid and responsive scaling across 15+ oceanographic chart types.
+2. **Existing Chart Modules [HEAVY REVIEW]**:
+   - `TSIsopycnals.tsx`: Verify UNESCO potential density $\sigma_\theta$ contour math and dark ocean styling.
+   - `HovmollerDiagram.tsx`: Verify depth contour interpolation on inverted y-axis ($0-2000\text{m}$).
+   - `DepthProfile.tsx`: Verify multi-line vertical cast rendering ($T, S, \text{DOXY}, \text{CHLA}$).
+   - `Surface3D.tsx`: Verify WebGL 3D wireframe mesh performance.
+   - Ensure all Plotly charts have `config={{ displayModeBar: false }}` and transparent backgrounds.
+
+### 🔨 What to BUILD (New Code)
+1. **`frontend/components/CrossDomainExplorer.tsx` [COMPLETELY NEW]**:
+   - Build INCOIS ⇄ CMLRE Explorer showing environmental thermal envelopes ($22-26^\circ\text{C}$ vs observed $29.2^\circ\text{C}$), correlated float observation ledger, and AI diagnosis.
+2. **Fill 4 Empty Chart Stubs [COMPLETELY NEW]**:
+   - `CrossCorrelogram.tsx`: $5\times 5$ correlation matrix heatmap of $[T, S, \text{DOXY}, \text{CHLA}, \text{NITRATE}]$.
+   - `ObsDensityMap.tsx`: Observation density grid heatmap.
+   - `ProfileCount.tsx`: Monthly profile count bar chart.
+   - `QCHistogram.tsx`: Sensor QC flag distribution histogram ($1..9$).
+3. **SIH 9-Slide Pitch Deck & 5-min Demo Video [COMPLETELY NEW]**:
+   - Author slide deck and record screen walkthrough following the exact narrative beats in Master Guide Section 10 & 11.
 
 ---
 
 ## 3. Technical Specifications & Implementation Blueprints
-
-### 3.1 INCOIS ↔ CMLRE Cross-Domain Explorer (`CrossDomainExplorer.tsx`)
 
 ```mermaid
 graph TD
@@ -44,27 +52,6 @@ graph TD
     
     SplitView --> InsightCard[AI Ecosystem Insight Card: Nemotron-Generated Provenance]
 ```
-
-#### Component Logic:
-- Displays public OBIS/GBIF records mapped to Darwin Core standard as realistic stand-in for CMLRE otolith/eDNA datasets.
-- Renders environmental envelope: shaded background region showing species thermal tolerance vs recorded water temperature from nearest ARGO float profiles.
-- Displays honest PoC badge: *"Demonstrated with OBIS/GBIF Indian Ocean public records. Architected for CMLRE national marine data backbone."*
-
----
-
-### 3.2 Chart Modules & Plotly Specifications
-
-#### 1. Temperature-Salinity Diagram with Isopycnals (`TSIsopycnals.tsx`):
-- Computes UNESCO potential density $\sigma_\theta$ contours as background isopycnal curves.
-- Plots potential temperature $\theta$ on y-axis ($^\circ\text{C}$) vs Practical Salinity $S_p$ on x-axis ($\text{PSU}$).
-- Color-encoded by depth (pressure in dbar).
-
-#### 2. Hovmöller Diagram (`HovmollerDiagram.tsx`):
-- Time on x-axis (months), Depth on y-axis (0 to 2000m inverted), Color scale = Temperature or Oxygen.
-- Interpolates profile grid using contour smoothing.
-
-#### 3. Cross-Correlogram (`CrossCorrelogram.tsx`):
-- $5 \times 5$ correlation matrix heatmap of $[T, S, \text{DOXY}, \text{CHLA}, \text{NITRATE}]$.
 
 ---
 

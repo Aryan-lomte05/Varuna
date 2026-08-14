@@ -5,7 +5,7 @@
 ---
 
 ## 1. Executive Summary & Ownership Boundaries
-Member 3 owns the model and cognitive layer of VARUNA:
+Member 3 owns the model integration, RAG pipeline, vector search namespaces, and cognitive sub-agents for VARUNA:
 1. **OpenRouter Client Infrastructure**: Production async HTTP client connecting to `nvidia/nemotron-ultra-550b-a55b:free`, eliminating all local Ollama/HuggingFace dependencies and latency blockers.
 2. **NL→SQL Sub-Agent with Schema-RAG Context**: High-precision natural-language-to-SQL translation with PostgreSQL dialect awareness, PostGIS spatial predicates, and few-shot vector context injection.
 3. **Dual Qdrant Vector Search Engine**: 
@@ -16,24 +16,36 @@ Member 3 owns the model and cognitive layer of VARUNA:
 
 ---
 
-## 2. File Ownership & Code Contracts
+## 2. Work Allocation: What to Review vs. What to Build
 
-### Primary Files Owned
-- `backend/src/llm/openrouter_client.py` [NEW - Primary OpenRouter Client]
-- `backend/src/llm/embedder.py` [UPDATE - Cloud embedder + deterministic vectorizer]
-- `backend/src/llm/sql_gen.py` [MAINTAIN - Rule-based offline SQL fallback]
-- `backend/src/chains/sql_rag_chain.py` [UPDATE - OpenRouter migration]
-- `backend/src/chains/rag_chain.py` [UPDATE - OpenRouter migration]
-- `backend/src/database/qdrant.py` [EXTEND - 3 collections support]
-- `backend/src/rag/` [MAINTAIN - Retriever, Reranker, Context Assembler, Decomposer]
-- `backend/src/memory/` [MAINTAIN - Conversation, Knowledge Graph, Temporal, Feedback]
-- `backend/src/config.py` [UPDATE - OpenRouter settings]
+### 🔍 What to REVIEW (Existing Code — Requires Heavy/High Critical Review)
+1. **`src/memory/conversation.py` [HIGH REVIEW]**:
+   - **Critical Flag**: Top-level `import redis` must be protected with `try/except ImportError` so the module never crashes in environments without Redis.
+   - Verify Redis sliding window key expiration and in-process dictionary fallback mechanism.
+2. **`src/llm/embedder.py` [HIGH REVIEW]**:
+   - **Critical Flag**: Replace MD5 deterministic hash vectorizer with real embedding calls to OpenRouter (`nomic-ai/nomic-embed-text-v1.5:free`).
+   - Keep the hash vectorizer strictly as an emergency offline testing utility.
+3. **`src/chains/sql_rag_chain.py` & `rag_chain.py` [HEAVY REVIEW]**:
+   - **Critical Flag**: Remove all legacy references to `ollama_client.py` and replace with `openrouter_client.py`.
+   - Update prompt templates to align with Nemotron-Ultra 550B system formatting.
+4. **`src/rag/retriever.py` & `src/database/qdrant.py` [HIGH REVIEW]**:
+   - Extend Qdrant collection initialization to manage 3 distinct namespaces (`argo_knowledge`, `argo_schema`, `bio_knowledge`).
+   - Validate BM25 + dense vector Reciprocal Rank Fusion (RRF) scoring math.
+5. **`src/config.py` [HIGH REVIEW]**:
+   - Verify `openrouter_model` defaults to `nvidia/nemotron-ultra-550b-a55b:free` and ensure all Ollama settings are marked as legacy fallbacks.
+
+### 🔨 What to BUILD (New Code)
+1. **`src/llm/openrouter_client.py` [COMPLETELY NEW - PRIORITY #1]**:
+   - Production async httpx client connecting to OpenRouter chat completions API with `tenacity` exponential retry on 429/503 status codes.
+   - Implements `chat_complete(messages, temperature, max_tokens, task_tag)` and `embed_text(texts)`.
+2. **`src/agents/sql_gen_agent.py` [COMPLETELY NEW]**:
+   - Sub-agent wrapper taking task parameters, retrieving few-shot schema examples from Qdrant, generating sanitized SQL, and executing on PostgreSQL.
+3. **`src/agents/retrieval_agent.py` [COMPLETELY NEW]**:
+   - Sub-agent wrapper querying both `argo_knowledge` and `bio_knowledge` collections and returning re-ranked passages.
 
 ---
 
 ## 3. Technical Specifications & Implementation Blueprints
-
-### 3.1 OpenRouter Client Architecture (`backend/src/llm/openrouter_client.py`)
 
 ```mermaid
 graph TD
@@ -50,78 +62,6 @@ graph TD
     TokenTrace --> CleanResponse[Extract Content & Strip Markdown Wrappers]
     CleanResponse --> SubAgent
 ```
-
-#### Code Contract (`openrouter_client.py`):
-```python
-from __future__ import annotations
-import logging
-from typing import Any, Dict, List, Optional
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from src.config import settings
-
-log = logging.getLogger(__name__)
-
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-class OpenRouterClient:
-    def __init__(self):
-        self.api_key = settings.openrouter_api_key
-        self.model = settings.openrouter_model or "nvidia/nemotron-ultra-550b-a55b:free"
-        self._client: Optional[httpx.AsyncClient] = None
-
-    async def get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=5.0))
-        return self._client
-
-    @retry(
-        reraise=True,
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TimeoutException))
-    )
-    async def chat_complete(
-        self,
-        messages: List[Dict[str, str]],
-        temperature: float = 0.1,
-        max_tokens: int = 4096,
-        task_tag: str = "general"
-    ) -> str:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "https://varuna.incois.gov.in",
-            "X-Title": "VARUNA Marine Intelligence Platform",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        client = await self.get_client()
-        resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-```
-
----
-
-### 3.2 Schema-Linked NL→SQL Generation Engine
-
-The SQL Generation Agent prompts Nemotron with:
-1. **Target Schema**: Exact DDL of `public.marine_data` (with partitioned columns) and `public.marine_biodiversity`.
-2. **Geospatial Reference Lexicon**: Bounding boxes for Indian Ocean basins:
-   - Arabian Sea: `lat BETWEEN 5 AND 25`, `lon BETWEEN 45 AND 77`
-   - Bay of Bengal: `lat BETWEEN 5 AND 25`, `lon BETWEEN 77 AND 100`
-   - Gulf of Mannar: `lat BETWEEN 8 AND 10`, `lon BETWEEN 78 AND 80`
-   - Equatorial Indian Ocean: `lat BETWEEN -5 AND 5`, `lon BETWEEN 45 AND 100`
-3. **Safety Guidelines**:
-   - `SELECT` queries only. Never `DROP`, `DELETE`, `UPDATE`, `INSERT`, `ALTER`.
-   - Always include column aliases for human readability (`AS depth_m`, `AS temp_celsius`).
-   - Limit all queries to maximum `500` rows unless aggregated with `GROUP BY`.
 
 ---
 
