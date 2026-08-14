@@ -22,9 +22,15 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import psycopg  # type: ignore
-import psycopg.rows  # type: ignore
-from psycopg_pool import ConnectionPool  # type: ignore
+try:
+    import psycopg  # type: ignore
+    import psycopg.rows  # type: ignore
+    from psycopg_pool import ConnectionPool  # type: ignore
+    _has_psycopg = True
+except ImportError:
+    psycopg = None  # type: ignore
+    ConnectionPool = Any  # type: ignore
+    _has_psycopg = False
 
 from src.config import settings  # type: ignore
 
@@ -41,9 +47,10 @@ MOCK_FLOATS = [
 _pool: Optional[ConnectionPool] = None
 _db_available: bool = True
 
-def get_pool() -> ConnectionPool:
+def get_pool() -> Optional[ConnectionPool]:
     global _pool, _db_available
-    if not _db_available:
+    if not _has_psycopg or not _db_available:
+        _db_available = False
         return None
     if _pool is None:
         try:

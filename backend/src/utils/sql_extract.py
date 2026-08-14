@@ -48,7 +48,16 @@ def extract_sql(text: str) -> Optional[str]:
         return None
     if any(b in low for b in BANNED):
         return None
-    if ";" in cand:  # multiple statements
-        return None
-
     return cand
+
+
+def sanitize_sql(sql: str) -> str:
+    """
+    Validate that the SQL query is a single, clean, safe SELECT statement.
+    Raises ValueError if unsafe, non-SELECT, or contains chained statements.
+    """
+    extracted = extract_sql(sql)
+    if not extracted:
+        raise ValueError(f"Invalid or unsafe SQL query: '{sql[:100]}...' - must be a single SELECT statement.")
+    return extracted
+

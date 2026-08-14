@@ -26,45 +26,55 @@ import logging
 from typing import Any, Dict, Optional
 from contextlib import contextmanager
 
-import structlog  # type: ignore
-from rich.console import Console  # type: ignore
-from rich.theme import Theme  # type: ignore
+try:
+    import structlog  # type: ignore
+    _has_structlog = True
+except ImportError:
+    structlog = None  # type: ignore
+    _has_structlog = False
 
-# ── Rich console (stderr so it doesn't pollute JSON stdout) ──────────────────
-_theme = Theme({
-    "query":   "bold cyan",
-    "rewrite": "bold blue",
-    "intent":  "bold magenta",
-    "bm25":    "yellow",
-    "vector":  "green",
-    "rerank":  "bold green",
-    "sql":     "bold yellow",
-    "exec":    "cyan",
-    "narrate": "blue",
-    "memory":  "dim white",
-    "kg":      "magenta",
-    "response":"bold white",
-    "error":   "bold red",
-    "warn":    "bold orange3",
-    "info":    "dim white",
-})
-
-console = Console(stderr=True, theme=_theme)
+try:
+    from rich.console import Console  # type: ignore
+    from rich.theme import Theme  # type: ignore
+    _theme = Theme({
+        "query":   "bold cyan",
+        "rewrite": "bold blue",
+        "intent":  "bold magenta",
+        "bm25":    "yellow",
+        "vector":  "green",
+        "rerank":  "bold green",
+        "sql":     "bold yellow",
+        "exec":    "cyan",
+        "narrate": "blue",
+        "memory":  "dim white",
+        "kg":      "magenta",
+        "response":"bold white",
+        "error":   "bold red",
+        "warn":    "bold orange3",
+        "info":    "dim white",
+    })
+    console = Console(stderr=True, theme=_theme)
+except ImportError:
+    class _MockConsole:
+        def print(self, *args, **kwargs): pass
+        def rule(self, *args, **kwargs): pass
+    console = _MockConsole()
 
 # ── structlog setup ───────────────────────────────────────────────────────────
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG),
-    context_class=dict,
-    logger_factory=structlog.WriteLoggerFactory(),
-)
-
-_log = structlog.get_logger()
+if _has_structlog:
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+    _log = structlog.get_logger("floatchat")
+else:
+    _log = logging.getLogger("floatchat")
 
 
 # ── Stage emitters ────────────────────────────────────────────────────────────
