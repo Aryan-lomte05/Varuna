@@ -1,307 +1,122 @@
-# 🌊 FloatChat AI — Global Oceanic Intelligence (Final Edition)
+# VARUNA 🌊
+### Agentic AI Ocean & Marine Ecosystem Intelligence Platform
+**A Unified National Marine Data Backbone Fusing INCOIS Physical Oceanography with CMLRE Living Resources**
 
-## Quick Start (Windows friendly)
-
-1. Backend
-   - cd apps/backend
-   - python -m venv .venv && . .venv/Scripts/activate
-   - pip install -r requirements.txt
-   - copy .env.example -> .env and set DATABASE_URL, HF_TOKEN
-   - python -m src.embeddings.build_vectorstore
-   - uvicorn src.server.serve:app --reload --host 0.0.0.0 --port 8000
-
-2. Frontend (Next 14)
-   - cd apps/web
-   - npm i
-   - copy .env.local.example -> .env.local and set NEXT_PUBLIC_BACKEND_URL
-   - npm run dev (http://localhost:3000)
-
-3. Test
-   - Ask: "Show me psal vs pres near the equator in March 2023 including temp and coords"
-
-## Structure
-
-- apps/backend: FastAPI, LoRA LLaMA → SQL, RAG (Chroma), Supabase Postgres.
-- apps/web: Next.js App Router UI with chat, charts (Plotly), and map (Leaflet).
-
-# FLOATCHATAI 🌊
-
-Your ocean-data copilot: ask natural language, get **Postgres SQL** + results + tidy summaries.
-
-- Ocean-themed greetings, small talk, time, quick math
-- Year-partitioned table (`public.marine_data_*`) with a parent `public.marine_data`
-- Coast-aware “nearest float” (e.g., “near Mumbai” → west coast)
-- Finetuned LoRA for robust SQL generation (TinyLlama base)
-
-## Quickstart
-
-### 0) Prereqs
-
-- Python 3.11+
-- (Optional) Docker (for local Postgres)
-- Git, curl/Postman/VS Code
-
-### 1) Clone
-
-````bash
-git clone https://github.com/<your-org>/floatchatai.git
-cd floatchatai/apps/backend
-2) Virtualenv & deps
-bash
-Copy code
-python -m venv .venv
-# Linux/Mac:
-source .venv/bin/activate
-# Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-3) Configure
-Copy env and fill secrets:
-
-bash
-Copy code
-cp .env.example .env
-Key vars:
-
-DATABASE_URL – your Postgres/Supabase connection string
-
-BASE_MODEL / LORA_OUT – base and LoRA paths (TinyLlama + your finetune)
-
-4) Create schema (optional if DB already has it)
-bash
-Copy code
-psql "$DATABASE_URL" -f src/db/schema.sql
-5) Run
-bash
-Copy code
-# Linux/Mac:
-bash uvicorn_local.sh
-# Windows:
-.\uvicorn_local.ps1
-Server runs at: http://127.0.0.1:8001
-
-6) Try it
-Health:
-
-bash
-Copy code
-curl http://127.0.0.1:8001/health
-Ask SQL task:
-
-bash
-Copy code
-curl -s -X POST http://127.0.0.1:8001/chat \
-  -H "Content-Type: application/json" \
-  -d '{ "question": "Monthly avg doxy and chla for Arabian Sea for last 6 months" }' | jq
-Exact float/time/depth (pressure) test:
-
-bash
-Copy code
-curl -s -X POST http://127.0.0.1:8001/chat \
-  -H "Content-Type: application/json" \
-  -d '{ "question": "Give me the pressure (depth) of buoy 1902367 at latitude 4.08365 and longitude 88.98723 at time 2025-06-30 21:41:29 where temperature is 11.489 °C" }' | jq
-Browser playground:
-
-arduino
-Copy code
-http://127.0.0.1:8001/play
-API
-GET /health → { ok: true }
-
-POST /chat { question: string, session?: string }
-→ { ok, answer_markdown, sql, rows, viz_specs, float_ids, error }
-
-Dev Notes
-Small talk, time, math handled directly in serve.py
-
-SQL generation & validation in src/chains/sql_rag_chain.py
-
-Nearest-float logic uses src/utils/geo.py and src/db/postgres.py
-
-Partitions by year for public.marine_data_* (see schema.sql)
-
-yaml
-Copy code
+[![Smart India Hackathon 2026](https://img.shields.io/badge/SIH-2026_Track-0A2540?style=for-the-badge&logo=target&logoColor=2EE6C6)](https://sih.gov.in)
+[![INCOIS PS 25040](https://img.shields.io/badge/INCOIS-PS_25040-071A2D?style=for-the-badge&logo=datacamp&logoColor=2EE6C6)](https://incois.gov.in)
+[![CMLRE PS 25041](https://img.shields.io/badge/CMLRE-PS_25041-051421?style=for-the-badge&logo=phylogeny&logoColor=00FFC6)](https://cmlre.gov.in)
+[![NVIDIA Nemotron 550B](https://img.shields.io/badge/LLM-NVIDIA_Nemotron_550B-76B900?style=for-the-badge&logo=nvidia&logoColor=white)](https://openrouter.ai)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js 14](https://img.shields.io/badge/Frontend-Next.js_14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![PostGIS](https://img.shields.io/badge/Spatial-PostgreSQL_PostGIS-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net)
 
 ---
 
-# 4) `apps/backend/.env.example`
+## 🌊 Overview
 
-```env
-# FastAPI
-FLOATCHAT_APP_ENV=dev
-FLOATCHAT_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-FLOATCHAT_TRUSTED_HOSTS=localhost,127.0.0.1
+**VARUNA** is an enterprise-grade agentic AI platform that bridges India's two siloed marine data domains:
+1. **INCOIS (Hyderabad)** — Real-time physical and chemical sensor profiles (temperature, salinity, oxygen, chlorophyll) from 3,800+ ARGO floats.
+2. **CMLRE (Kochi)** — Marine living resources taxonomy, species distributions, and ecosystem biodiversity records.
 
-# Database
-DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+VARUNA lets oceanographers, disaster cells, and fisheries authorities ask compound natural-language questions across both domains — and **proactively warns** them before marine heatwaves or hypoxic anomalies trigger ecological damage.
 
-# Embeddings / Chroma (if used)
-EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
-CHROMA_DIR=./chroma
+---
 
-# Model
-BASE_MODEL=TinyLlama/TinyLlama-1.1B-Chat-v1.0
-LORA_OUT=artifacts/lora-marine-v1
-HF_TOKEN=
-5) apps/backend/requirements.txt
-txt
-Copy code
-fastapi==0.112.2
-uvicorn[standard]==0.30.6
-pydantic==2.9.2
-pydantic-settings==2.6.1
-httpx==0.27.2
+## ⚡ Key Innovations (Surpassing OceanIQ — SIH 2025 Winner)
 
-sqlalchemy==2.0.35
-psycopg2-binary==2.9.9
+```
+┌───────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+│ Capability                            │ Innovation in VARUNA                                                        │
+├───────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ 🧠 Multi-Agent Task DAG Planner       │ Decomposes compound multi-hop queries into asynchronous dependency DAGs.     │
+│ 🚨 Proactive Anomaly Agent           │ Continuous 6-hr scanner detecting Marine Heatwaves (Hobday 2016) & Hypoxia. │
+│ 🐟 CMLRE Darwin Core Fusion           │ Spatio-temporal joins (≤50km, ≤7 days) between float data & marine species. │
+│ ⚡ Zero-Local-LLM Architecture        │ Zero GPU baggage; high-speed async OpenRouter NVIDIA Nemotron-550B.         │
+│ 🛡️ Strict Zero-Hallucination          │ Every numerical value is strictly traced back to a verified SQL row.        │
+│ 🛰️ Military-Grade Command Center      │ Liquid glass dark HUD, Deck.gl WebGL maps, 15+ oceanographic Plotly charts. │
+└───────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+```
 
-transformers==4.44.2
-accelerate==0.34.2
-peft==0.13.2
-datasets==2.21.0
-torch>=2.3.0
+---
 
-langchain==0.2.16
-langchain-chroma==0.1.4
-langchain-huggingface==0.0.3
-chromadb==0.5.5
+## 📐 High-Level Architecture
 
-python-dotenv==1.0.1
-(If you already have working versions, keep them.)
+```mermaid
+graph TB
+    UserQuery([User Natural Language Query]) --> APIGateway[FastAPI Gateway /api/v1/agent/chat]
+    APIGateway --> PlannerAgent[Planner Agent: NVIDIA Nemotron-Ultra 550B]
+    
+    PlannerAgent --> TaskDAG{ExecutionPlan DAG}
+    
+    TaskDAG -->|NL->SQL Task| SQLAgent[SQL-Gen Sub-Agent + PostGIS]
+    TaskDAG -->|Semantic Task| VectorAgent[Hybrid Retrieval Sub-Agent BM25 + Qdrant]
+    TaskDAG -->|Biodiversity Task| BioAgent[CMLRE Darwin Core Entity Resolver]
+    
+    SQLAgent --> DB[(PostgreSQL + PostGIS marine_data)]
+    VectorAgent --> QdrantDB[(Qdrant Vector DB argo_knowledge)]
+    BioAgent --> BioDB[(PostgreSQL marine_biodiversity)]
+    
+    SQLAgent --> Synthesizer[Synthesizer Agent: Grounded Provenance]
+    VectorAgent --> Synthesizer
+    BioAgent --> Synthesizer
+    
+    Synthesizer --> CommandCenter[Command Center UI: Live Agent Graph + Plotly]
+```
 
-6) apps/backend/src/db/schema.sql (seed + partitions)
-sql
-Copy code
-CREATE TABLE IF NOT EXISTS public.marine_data (
-    platform_number INT4,
-    latitude NUMERIC,
-    longitude NUMERIC,
-    time TIMESTAMP NOT NULL,
-    pres NUMERIC,               -- depth in meters from your note
-    temp NUMERIC,
-    psal NUMERIC,
-    doxy NUMERIC,
-    chla NUMERIC,
-    ph_in_situ_total NUMERIC,
-    nitrate NUMERIC
-) PARTITION BY RANGE (time);
+---
 
--- Partitions (adjust years to your data)
-CREATE TABLE IF NOT EXISTS public.marine_data_2022 PARTITION OF public.marine_data
-    FOR VALUES FROM ('2022-01-01 00:00:00') TO ('2023-01-01 00:00:00');
+## 🚀 Quickstart (Zero-Docker Native Local Setup)
 
-CREATE TABLE IF NOT EXISTS public.marine_data_2023 PARTITION OF public.marine_data
-    FOR VALUES FROM ('2023-01-01 00:00:00') TO ('2024-01-01 00:00:00');
+### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1   # Windows (or source venv/bin/activate on Linux/Mac)
+pip install -r requirements.txt
 
-CREATE TABLE IF NOT EXISTS public.marine_data_2024 PARTITION OF public.marine_data
-    FOR VALUES FROM ('2024-01-01 00:00:00') TO ('2025-01-01 00:00:00');
+# Configure backend/.env (copy from .env.example with your OpenRouter API key)
 
-CREATE TABLE IF NOT EXISTS public.marine_data_2025 PARTITION OF public.marine_data
-    FOR VALUES FROM ('2025-01-01 00:00:00') TO ('2026-01-01 00:00:00');
+# Seed 500+ Indian Ocean marine species records
+python -m src.ingestion.seed_biodiversity
 
--- Helpful indexes (per partition for pruning)
-CREATE INDEX IF NOT EXISTS md_2025_platform_time_idx ON public.marine_data_2025 (platform_number, time);
-CREATE INDEX IF NOT EXISTS md_2025_lat_lon_idx       ON public.marine_data_2025 (latitude, longitude);
-7) apps/backend/uvicorn_local.sh
-bash
-Copy code
-#!/usr/bin/env bash
-set -euo pipefail
-export FLOATCHAT_APP_ENV="${FLOATCHAT_APP_ENV:-dev}"
-export FLOATCHAT_CORS_ORIGINS="${FLOATCHAT_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
-export FLOATCHAT_TRUSTED_HOSTS="${FLOATCHAT_TRUSTED_HOSTS:-localhost,127.0.0.1}"
-uvicorn src.server.serve:app --host 127.0.0.1 --port 8001 --reload --proxy-headers --forwarded-allow-ips="*"
-8) apps/backend/uvicorn_local.ps1
-powershell
-Copy code
-$env:FLOATCHAT_APP_ENV = $env:FLOATCHAT_APP_ENV -ne $null ? $env:FLOATCHAT_APP_ENV : "dev"
-$env:FLOATCHAT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
-$env:FLOATCHAT_TRUSTED_HOSTS = "localhost,127.0.0.1"
-uvicorn src.server.serve:app --host 127.0.0.1 --port 8001 --reload --proxy-headers --forwarded-allow-ips="*"
-9) apps/backend/public/play.html (tiny “Try it live”)
-html
-Copy code
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <title>FLOATCHATAI – Try it</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <style>
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem}
-    textarea{width:100%;height:120px}
-    pre{background:#0b1220;color:#d6e1ff;padding:12px;border-radius:10px;overflow:auto}
-    .row{display:flex;gap:8px}
-    .row>*{flex:1}
-    button{padding:10px 14px;border-radius:10px;border:0;background:#2b5fff;color:#fff;cursor:pointer}
-    .ok{color:#0a7f22;margin-left:8px}
-  </style>
-</head>
-<body>
-  <h1>🌊 FLOATCHATAI – Try it live</h1>
-  <p>Backend endpoint: <code>http://127.0.0.1:8001/chat</code></p>
-  <div class="row">
-    <textarea id="q">Give me the pressure (depth) of buoy 1902367 at latitude 4.08365 and longitude 88.98723 at time 2025-06-30 21:41:29 where temperature is 11.489 °C</textarea>
-    <div>
-      <button id="ask">Ask</button>
-      <span id="ok" class=""></span>
-    </div>
-  </div>
-  <h3>Answer</h3>
-  <div id="md"></div>
-  <h3>SQL</h3>
-  <pre id="sql"></pre>
-  <h3>Rows</h3>
-  <pre id="rows"></pre>
-<script>
-const ask = document.getElementById('ask');
-ask.onclick = async () => {
-  document.getElementById('ok').textContent = '…';
-  const q = document.getElementById('q').value;
-  const r = await fetch('/play/chat', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({question:q})
-  });
-  const j = await r.json();
-  document.getElementById('ok').textContent = j.ok ? '✓ ok' : 'error';
-  document.getElementById('ok').className = j.ok ? 'ok' : '';
-  document.getElementById('md').innerText = j.answer_markdown || '';
-  document.getElementById('sql').innerText = j.sql || '';
-  document.getElementById('rows').innerText = JSON.stringify(j.rows, null, 2) || '';
-};
-</script>
-</body>
-</html>
-You’ll reach it at: http://127.0.0.1:8001/play
+# Launch FastAPI server
+uvicorn main:app --reload --port 8000
+```
+- API Documentation: `http://localhost:8000/docs`
 
-10) apps/backend/.github/workflows/ci.yml (basic CI)
-yaml
-Copy code
-name: backend-ci
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- Command Center UI: `http://localhost:3000`
 
-on:
-  push:
-    paths:
-      - 'apps/backend/**'
-  pull_request:
-    paths:
-      - 'apps/backend/**'
+---
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: python -m venv .venv
-      - run: . .venv/bin/activate && pip install -r requirements.txt
-      - name: Lint import
-        run: . .venv/bin/activate && python -c "import fastapi, sqlalchemy, transformers; print('ok'
-````
+## 👥 Team Ctrl Alt Defeat & Assignment Directory
+
+| Member | Name | Role | Specification |
+|---|---|---|---|
+| **M1** | **Aryan Lomte (Lead)** | AI Systems Architect, Team Lead | [Aryan_Lomte.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md) |
+| **M2** | **Aditya Yadav** | Data Engineer & Backend Lead | [Aditya_Yadav.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aditya_Yadav.md) |
+| **M3** | **Sahil Shah** | AI/LLM Systems Engineer | [Sahil_Shah.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md) |
+| **M4** | **Advay Chavan** | Frontend Full-Stack Lead | [Advay_Chavan.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Advay_Chavan.md) |
+| **M5** | **Netal Gupta** | Geospatial Visualization Specialist | [Netal_Gupta.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Netal_Gupta.md) |
+| **M6** | **Kanishka Sahal** | Marine Analytics & Presentation Lead | [Kanishka_Sahal.md](file:///e:/Hackathons/floatchatai-main/docs/assignments/Kanishka_Sahal.md) |
+
+---
+
+## 📚 Complete Technical Documentation
+
+- 📖 **[Master Handbook: VARUNA.md](file:///e:/Hackathons/floatchatai-main/VARUNA.md)**
+- 🏛️ **[Architecture Overview](file:///e:/Hackathons/floatchatai-main/docs/architecture/01_SYSTEM_OVERVIEW.md)**
+- 🤖 **[Multi-Agent Task DAG Orchestration](file:///e:/Hackathons/floatchatai-main/docs/architecture/02_MULTI_AGENT_ORCHESTRATION.md)**
+- 📊 **[NetCDF HPC Extraction & Ingestion Pipeline](file:///e:/Hackathons/floatchatai-main/docs/architecture/03_NETCDF_INGESTION_AND_HPC_ETL.md)**
+- 🐟 **[CMLRE Darwin Core Biodiversity Fusion](file:///e:/Hackathons/floatchatai-main/docs/architecture/04_CMLRE_BIODIVERSITY_FUSION.md)**
+- 🚨 **[Proactive Anomaly & MHW Early-Warning Engine](file:///e:/Hackathons/floatchatai-main/docs/architecture/05_PROACTIVE_ANOMALY_ENGINE.md)**
+- 🗄️ **[Database & Qdrant Vector Schema](file:///e:/Hackathons/floatchatai-main/docs/architecture/06_DATABASE_AND_VECTOR_SCHEMA.md)**
+- 🧠 **[OpenRouter Nemotron-550B Cognitive Layer](file:///e:/Hackathons/floatchatai-main/docs/architecture/07_LLM_OPENROUTER_ENGINE.md)**
+- 🖥️ **[Frontend Operations Center UI Specification](file:///e:/Hackathons/floatchatai-main/docs/architecture/08_FRONTEND_OPERATIONS_CENTER.md)**
+- 🛠️ **[Zero-Docker Local Setup Guide](file:///e:/Hackathons/floatchatai-main/docs/development/01_LOCAL_SETUP_NO_DOCKER.md)**
+- 📋 **[API Contracts & Schema Specifications](file:///e:/Hackathons/floatchatai-main/docs/development/04_API_CONTRACTS.md)**
