@@ -15,6 +15,8 @@
 | `GET` | `/api/v1/trajectory/{id}` | Float historical drift track | `TrajectoryLayer.tsx` |
 | `GET` | `/api/v1/profile/{id}` | Vertical depth profile measurements | `DepthProfile.tsx` |
 | `GET` | `/api/v1/export` | CSV / Parquet tabular data export | Dataset Browser |
+| `POST` | `/api/v1/ml/forecast-mhw` | 7-Day spatio-temporal MHW forecast surface | `AnomalyAlerts.tsx` |
+| `POST` | `/api/v1/ml/qc-detect` | 1D-CNN deep sensor drift & biofouling detection | Ingestion / QC Monitor |
 | `GET` | `/health` | Server and database health check | Monitoring |
 
 ---

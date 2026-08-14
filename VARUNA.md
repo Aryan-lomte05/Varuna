@@ -135,9 +135,9 @@ Last year's winning solution (**OceanIQ**, public repository: `PaarthNo1/OceanIQ
 
 | Member | Name | Role | Primary Files Owned |
 |---|---|---|---|
-| **M1** | **[Aryan Lomte (Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md)** | AI Systems Architect & Lead | `src/agents/orchestrator.py`, `src/agents/anomaly_agent.py`, `src/agents/synthesizer_agent.py`, `src/api/routes.py` |
+| **M1** | **[Aryan Lomte (Lead)](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aryan_Lomte.md)** | AI Systems Architect & Full RAG Lead | `src/agents/orchestrator.py`, `src/agents/anomaly_agent.py`, `src/agents/synthesizer_agent.py`, `src/llm/openrouter_client.py`, `src/chains/sql_rag_chain.py`, `src/database/qdrant.py`, `src/api/routes.py` |
 | **M2** | **[Aditya Yadav](file:///e:/Hackathons/floatchatai-main/docs/assignments/Aditya_Yadav.md)** | Data Engineer & Backend Lead | `src/ingestion/pipeline.py`, `src/ingestion/seed_biodiversity.py`, `src/database/postgres.py` |
-| **M3** | **[Sahil Shah](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md)** | AI/LLM Systems Engineer | `src/llm/openrouter_client.py`, `src/chains/sql_rag_chain.py`, `src/database/qdrant.py` |
+| **M3** | **[Sahil Shah](file:///e:/Hackathons/floatchatai-main/docs/assignments/Sahil_Shah.md)** | Predictive ML & Sensor QC Lead | `src/ml/mhw_forecast.py`, `src/ml/qc_autoencoder.py` |
 | **M4** | **[Advay Chavan](file:///e:/Hackathons/floatchatai-main/docs/assignments/Advay_Chavan.md)** | Frontend Full-Stack Lead | `frontend/app/page.tsx`, `frontend/components/ChatPanel.tsx`, `frontend/components/AgentGraph.tsx` |
 | **M5** | **[Netal Gupta](file:///e:/Hackathons/floatchatai-main/docs/assignments/Netal_Gupta.md)** | Geospatial Visualization Specialist | `frontend/components/OceanMap.tsx`, `frontend/components/AnomalyAlerts.tsx` |
 | **M6** | **[Kanishka Sahal](file:///e:/Hackathons/floatchatai-main/docs/assignments/Kanishka_Sahal.md)** | Marine Analytics & Presentation Lead | `frontend/components/CrossDomainExplorer.tsx`, `frontend/components/Charts/`, SIH Deck & Video |
