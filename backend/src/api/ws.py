@@ -44,6 +44,8 @@ async def _send(ws: WebSocket, msg_type: str, data):
 
 
 @router.websocket("/ws/chat")
+@router.websocket("/api/v1/ws/chat")
+@router.websocket("/api/ws/chat")
 async def ws_chat(websocket: WebSocket):
     """
     WebSocket endpoint for streaming chat responses.

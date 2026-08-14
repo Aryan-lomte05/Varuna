@@ -144,7 +144,7 @@ async def answer(
     
     prose = await prose_task
     if trace:
-        trace.log("NARRATE", f"Narration: {prose[:120]}...")
+        trace.log("NARRATE", f"Narration: {str(prose)[:120]}...")
 
     md = _format_response(prose, sql, rows)
     return {

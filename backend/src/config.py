@@ -31,13 +31,17 @@ class Settings(BaseSettings):
     # ── Redis ──────────────────────────────────────────
     redis_url: str = Field("redis://localhost:6379/0", alias="REDIS_URL")
 
-    # ── Ollama ─────────────────────────────────────────
+    # ── Ollama / OpenRouter / Cloud API ─────────────────────
     ollama_url: str = Field("http://localhost:11434", alias="OLLAMA_URL")
     ollama_sql_model: str = Field("qwen2.5:7b", alias="OLLAMA_SQL_MODEL")
-    ollama_narrate_model: str = Field("llama3.1:8b", alias="OLLAMA_NARRATE_MODEL")
+    ollama_narrate_model: str = Field("llama3:8b", alias="OLLAMA_NARRATE_MODEL")
     ollama_embed_model: str = Field("nomic-embed-text", alias="OLLAMA_EMBED_MODEL")
-    ollama_rewrite_model: str = Field("phi3:latest", alias="OLLAMA_REWRITE_MODEL")
-    ollama_code_model: str = Field("deepseek-coder:6.7b", alias="OLLAMA_CODE_MODEL")
+    ollama_rewrite_model: str = Field("qwen2.5:7b", alias="OLLAMA_REWRITE_MODEL")
+    ollama_code_model: str = Field("qwen2.5:7b", alias="OLLAMA_CODE_MODEL")
+
+    openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field("nvidia/nemotron-4-340b-instruct", alias="OPENROUTER_MODEL")
+    hf_token: str = Field("", alias="HF_TOKEN")
 
     # ── RAG ────────────────────────────────────────────
     rag_top_k: int = Field(12, alias="RAG_TOP_K")

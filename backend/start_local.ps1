@@ -1,6 +1,6 @@
 # Start FastAPI API Locally
 $env:APP_ENV="dev"
-$env:POSTGRES_URL="postgresql://postgres:postgres@localhost:5432/floatchat"
+$env:PG_DSN="postgresql://aditya4@10.0.10.239:5432/postgres?sslmode=disable"
 $env:REDIS_URL="redis://localhost:6379"
 $env:QDRANT_URL="http://localhost:6333"
 $env:OLLAMA_URL="http://localhost:11434"

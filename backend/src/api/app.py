@@ -98,7 +98,12 @@ from src.api.routes import router as api_router
 from src.api.ws import router as ws_router
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api")
 app.include_router(ws_router)
+
+from src.api.ws import ws_chat
+app.add_api_websocket_route("/ws/chat", ws_chat)
+app.add_api_websocket_route("/api/ws/chat", ws_chat)
 
 
 @app.get("/health")

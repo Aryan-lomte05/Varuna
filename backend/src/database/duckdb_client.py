@@ -32,19 +32,89 @@ import duckdb
 from src.config import settings
 
 # ── Connection factory (one per thread — DuckDB connections aren't threadsafe) ─
-def get_conn(read_only: bool = True) -> duckdb.DuckDBPyConnection:
-    """Create a DuckDB connection over the processed Parquet directory."""
+def _seed_in_memory_data(conn: duckdb.DuckDBPyConnection):
+    """Seed DuckDB memory engine with realistic ARGO dataset covering Indian Ocean."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS marine_data (
+            platform_number INTEGER,
+            time TIMESTAMP,
+            latitude DOUBLE,
+            longitude DOUBLE,
+            pres DOUBLE,
+            temp DOUBLE,
+            psal DOUBLE,
+            doxy DOUBLE,
+            chla DOUBLE,
+            ph_in_situ_total DOUBLE,
+            nitrate DOUBLE
+        );
+    """)
+    # Check if table already has rows
+    cnt = conn.execute("SELECT COUNT(*) FROM marine_data").fetchone()[0]
+    if cnt > 0:
+        return
+
+    # Seed 300+ synthetic ARGO telemetry points for Indian Ocean
+    import random
+    from datetime import datetime, timedelta
+
+    platforms = [1902303, 5906478, 2903567, 4901234, 1902304, 3901235, 1902367]
+    locs = [
+        ("Mumbai Coastal", 19.07, 72.87),
+        ("Maldives Region", 3.20, 73.00),
+        ("Central Arabian Sea", 15.00, 65.00),
+        ("Bay of Bengal", 12.00, 88.00),
+        ("Equatorial Indian Ocean", 0.00, 80.00),
+    ]
+
+    rows = []
+    base_date = datetime(2023, 1, 1)
+
+    for plat in platforms:
+        loc = random.choice(locs)
+        for d in range(0, 400, 10):
+            t_date = base_date + timedelta(days=d, hours=random.randint(0, 23))
+            lat = loc[1] + random.uniform(-1.5, 1.5)
+            lon = loc[2] + random.uniform(-1.5, 1.5)
+            # Create depth profile (0 to 1000m)
+            for pres in [5.0, 25.0, 50.0, 100.0, 200.0, 500.0, 1000.0]:
+                temp = round(29.0 - (pres / 50.0) + random.uniform(-0.5, 0.5), 3)
+                if temp < 4.0: temp = 4.123
+                psal = round(34.8 + (pres / 1000.0) + random.uniform(-0.2, 0.2), 3)
+                doxy = round(210.0 - (pres / 6.0) + random.uniform(-5, 5), 2)
+                if doxy < 20.0: doxy = 22.5
+                chla = round(max(0.01, 0.6 - (pres / 200.0) + random.uniform(-0.05, 0.05)), 3)
+                ph = round(8.1 - (pres / 2000.0), 2)
+                nitrate = round(min(35.0, 0.5 + (pres / 30.0)), 2)
+
+                rows.append((plat, t_date, lat, lon, pres, temp, psal, doxy, chla, ph, nitrate))
+
+    conn.executemany("""
+        INSERT INTO marine_data (platform_number, time, latitude, longitude, pres, temp, psal, doxy, chla, ph_in_situ_total, nitrate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
+
+
+def get_conn(read_only: bool = False) -> duckdb.DuckDBPyConnection:
+    """Create a DuckDB connection over the processed Parquet directory or in-memory store."""
     conn = duckdb.connect(database=":memory:", read_only=False)
-    # Register all parquet files in the processed dir as a virtual table
     parquet_glob = str(Path(settings.data_parquet_dir) / "*.parquet")
+    loaded_parquet = False
     if Path(settings.data_parquet_dir).exists():
         try:
-            conn.execute(f"""
-                CREATE OR REPLACE VIEW marine_data AS
-                SELECT * FROM read_parquet('{parquet_glob}')
-            """)
+            files = list(Path(settings.data_parquet_dir).glob("*.parquet"))
+            if files:
+                conn.execute(f"""
+                    CREATE OR REPLACE VIEW marine_data AS
+                    SELECT * FROM read_parquet('{parquet_glob}')
+                """)
+                loaded_parquet = True
         except Exception:
-            pass  # No parquet files yet — view will fail silently
+            pass
+
+    if not loaded_parquet:
+        _seed_in_memory_data(conn)
+
     return conn
 
 

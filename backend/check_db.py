@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append(os.getcwd())
-from src.db.postgres import get_pool
+from src.database.postgres import get_pool
 
 def check_tables():
     pool = get_pool()
