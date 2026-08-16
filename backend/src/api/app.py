@@ -100,21 +100,25 @@ async def lifespan(app: FastAPI):
 
     # Initialize PostgreSQL tables & PostGIS extension
     try:
-        from src.database.postgres import init_db, init_biodiversity_schema, init_anomaly_schema
-        init_db()
-        init_biodiversity_schema()
-        init_anomaly_schema()
+        from src.database import postgres
+        if hasattr(postgres, "init_db"):
+            postgres.init_db()
+        if hasattr(postgres, "init_biodiversity_schema"):
+            postgres.init_biodiversity_schema()
+        if hasattr(postgres, "init_anomaly_schema"):
+            postgres.init_anomaly_schema()
         log.info("PostgreSQL & PostGIS schemas initialized successfully")
     except Exception as e:
-        log.warning("Postgres initialization skipped or running in offline mode", error=str(e))
+        log.warning("Postgres initialization skipped or running in offline mode: %s", str(e))
 
     # Initialize Qdrant vector collections
     try:
-        from src.database.qdrant import init_qdrant
-        await init_qdrant()
-        log.info("Qdrant vector indices initialized")
+        from src.database import qdrant
+        if hasattr(qdrant, "init_qdrant"):
+            await qdrant.init_qdrant()
+            log.info("Qdrant vector indices initialized")
     except Exception as e:
-        log.warning("Qdrant initialization skipped or offline", error=str(e))
+        log.warning("Qdrant initialization skipped or offline: %s", str(e))
 
     console.rule("[bold green]🌊 VARUNA Marine Intelligence System — Ready[/bold green]")
     yield

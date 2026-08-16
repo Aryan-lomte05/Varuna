@@ -1,48 +1,61 @@
 """
-FloatChat AI — Main Entrypoint
-
-This script hooks into Uvicorn to run the FastAPI app.
-We configure structlog as the global logger so Uvicorn logs 
-match our beautiful pipeline logs.
+VARUNA — Main Application Entrypoint
+Fusing INCOIS ARGO Physical Oceanography with CMLRE Marine Living Resources.
 """
-import sys
-import uvicorn
+
+from __future__ import annotations
+
 import logging
-import structlog
+import sys
+
+try:
+    import structlog  # type: ignore
+    _has_structlog = True
+except ImportError:
+    structlog = None  # type: ignore
+    _has_structlog = False
+
+# Export FastAPI app for `uvicorn main:app`
+from src.api.app import app
+
 
 def setup_logging():
-    """Wire standard Python logging to route through structlog."""
+    """Configure standard logging with optional structlog enhancement."""
     logging.basicConfig(
-        format="%(message)s",
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         stream=sys.stdout,
         level=logging.INFO,
     )
-    structlog.configure(
-        processors=[
-            structlog.stdlib.add_log_level,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer(colors=True),
-        ],
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True,
-    )
-    
-    # Hijack uvicorn loggers
-    for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
-        logger = logging.getLogger(logger_name)
-        logger.handlers.clear()
-        logger.propagate = True
+    if _has_structlog and structlog is not None:
+        try:
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.dev.ConsoleRenderer(colors=True),
+                ],
+                context_class=dict,
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.stdlib.BoundLogger,
+                cache_logger_on_first_use=True,
+            )
+            # Hijack uvicorn loggers
+            for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+                logger = logging.getLogger(logger_name)
+                logger.handlers.clear()
+                logger.propagate = True
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     setup_logging()
-    
+
+    import uvicorn
     from src.config import settings
-    
-    # Reload enabled in DEV, disabled in PROD
+
     reload = settings.app_env.lower() in ("dev", "development")
-    
+
     uvicorn.run(
         "src.api.app:app",
         host="0.0.0.0",
