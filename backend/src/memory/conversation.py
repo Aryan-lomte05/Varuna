@@ -22,23 +22,34 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import redis  # type: ignore
+try:
+    import redis  # type: ignore
+    _has_redis = True
+except ImportError:
+    redis = None  # type: ignore
+    _has_redis = False
 
 from src.config import settings  # type: ignore
 
 # ── Redis connection (lazy singleton) ─────────────────────────────────────────
-_redis: Optional[redis.Redis] = None
+_redis: Optional[Any] = None
+_IN_MEM_SESSIONS: Dict[str, List[Dict[str, str]]] = {}
 
 
-def get_redis() -> redis.Redis:
+def get_redis() -> Optional[Any]:
     global _redis
-    if _redis is None:
-        _redis = redis.from_url(
-            settings.redis_url,
-            decode_responses=True,
-            socket_connect_timeout=5,
-            health_check_interval=30,
-        )
+    if not _has_redis:
+        return None
+    if _redis is None and redis is not None:
+        try:
+            _redis = redis.from_url(
+                settings.redis_url,
+                decode_responses=True,
+                socket_connect_timeout=2,
+                health_check_interval=30,
+            )
+        except Exception:
+            _redis = None
     return _redis
 
 
@@ -54,44 +65,53 @@ def _key(session_id: str) -> str:
 def get_history(session_id: str) -> List[Dict[str, str]]:
     """Retrieve conversation history as list of {role, content} dicts."""
     try:
-        raw = get_redis().get(_key(session_id))
-        if not raw:
-            return []
-        data = json.loads(raw)
-        return data.get("messages", [])
+        r = get_redis()
+        if r is not None:
+            raw = r.get(_key(session_id))
+            if raw:
+                data = json.loads(raw)
+                return data.get("messages", [])
+        return _IN_MEM_SESSIONS.get(session_id, [])
     except Exception:
-        return []
+        return _IN_MEM_SESSIONS.get(session_id, [])
 
 
 def append_message(session_id: str, role: str, content: str) -> None:
     """Append a message and trim to MAX_TURNS. Refreshes TTL."""
+    # Maintain in-memory buffer
+    if session_id not in _IN_MEM_SESSIONS:
+        _IN_MEM_SESSIONS[session_id] = []
+    _IN_MEM_SESSIONS[session_id].append({"role": role, "content": content})
+    if len(_IN_MEM_SESSIONS[session_id]) > MAX_TURNS:
+        _IN_MEM_SESSIONS[session_id] = _IN_MEM_SESSIONS[session_id][-MAX_TURNS:]
+
     try:
         r = get_redis()
-        raw = r.get(_key(session_id))
-        
-        parsed = json.loads(raw) if raw else None
-        data: Dict[str, Any] = dict(parsed) if parsed else {
-            "session_id": session_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "messages": [],
-        }
-        data["messages"].append({"role": role, "content": content})
-        
-        # Keep last MAX_TURNS
-        msgs = list(data["messages"])
-        start_idx = max(0, len(msgs) - MAX_TURNS)
-        data["messages"] = msgs[start_idx:]  # type: ignore
-        
-        data["updated_at"] = datetime.utcnow().isoformat()
-        r.setex(_key(session_id), SESSION_TTL, json.dumps(data))
+        if r is not None:
+            raw = r.get(_key(session_id))
+            parsed = json.loads(raw) if raw else None
+            data: Dict[str, Any] = dict(parsed) if parsed else {
+                "session_id": session_id,
+                "created_at": datetime.utcnow().isoformat(),
+                "messages": [],
+            }
+            data["messages"].append({"role": role, "content": content})
+            msgs = list(data["messages"])
+            start_idx = max(0, len(msgs) - MAX_TURNS)
+            data["messages"] = msgs[start_idx:]
+            data["updated_at"] = datetime.utcnow().isoformat()
+            r.setex(_key(session_id), SESSION_TTL, json.dumps(data))
     except Exception:
-        pass  # Gracefully degrade — don't crash on Redis failure
+        pass  # Gracefully degrade to in-memory store
 
 
 def clear_session(session_id: str) -> None:
     """Delete a session."""
+    _IN_MEM_SESSIONS.pop(session_id, None)
     try:
-        get_redis().delete(_key(session_id))
+        r = get_redis()
+        if r is not None:
+            r.delete(_key(session_id))
     except Exception:
         pass
 
