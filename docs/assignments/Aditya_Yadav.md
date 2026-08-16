@@ -60,6 +60,102 @@ graph LR
     PostgresCopy --> PostGISFinal[INSERT INTO public.marine_data WITH ST_SetSRID]
 ```
 
+#### QC Flag Interpretation Matrix:
+| Flag | Meaning | Action in Ingestion |
+|---|---|---|
+| `1` | Good data | Ingest directly |
+| `2` | Probably good | Ingest directly |
+| `3` | Bad data that are potentially correctable | Drop parameter value (set to NULL) |
+| `4` | Bad data | Drop parameter value (set to NULL) |
+| `5` | Value modified | Ingest directly |
+| `8` | Estimated value | Ingest with QC annotation |
+| `9` | Missing value | Drop parameter value |
+
+---
+
+### 3.2 CMLRE Biodiversity Schema (`public.marine_biodiversity`)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.marine_biodiversity (
+    id                BIGSERIAL PRIMARY KEY,
+    occurrence_id     VARCHAR(128) UNIQUE NOT NULL,
+    scientific_name   VARCHAR(255) NOT NULL,
+    common_name       VARCHAR(255),
+    taxon_rank        VARCHAR(64) DEFAULT 'Species',
+    kingdom           VARCHAR(64) DEFAULT 'Animalia',
+    phylum            VARCHAR(64),
+    class_name        VARCHAR(64),
+    order_name        VARCHAR(64),
+    family            VARCHAR(64),
+    genus             VARCHAR(64),
+    species           VARCHAR(64),
+    decimal_latitude  DOUBLE PRECISION NOT NULL,
+    decimal_longitude DOUBLE PRECISION NOT NULL,
+    geom              GEOGRAPHY(POINT, 4326),
+    depth_m           DOUBLE PRECISION DEFAULT 0.0,
+    event_date        DATE NOT NULL,
+    ocean_basin       VARCHAR(64) NOT NULL, -- 'arabian_sea' | 'bay_of_bengal' | 'gulf_of_mannar' | 'andaman_sea'
+    data_source       VARCHAR(64) DEFAULT 'OBIS_INDIAN_OCEAN',
+    individual_count  INT4 DEFAULT 1,
+    life_stage        VARCHAR(64),
+    recorded_by       VARCHAR(255),
+    habitat_notes     TEXT,
+    raw_json          JSONB,
+    created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bio_geom ON public.marine_biodiversity USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_bio_species_date ON public.marine_biodiversity (scientific_name, event_date);
+CREATE INDEX IF NOT EXISTS idx_bio_basin ON public.marine_biodiversity (ocean_basin);
+```
+
+---
+
+### 3.3 Species ↔ Ocean Spatial-Temporal Cross-Domain Query
+
+```python
+def correlate_species_with_ocean(species_name: str, days: int = 90, limit: int = 200) -> List[Dict[str, Any]]:
+    """
+    Lateral spatial-temporal join between marine_biodiversity and nearest ARGO float profiles.
+    Criteria: distance <= 50km, time delta <= 7 days.
+    """
+    sql = """
+    SELECT 
+        b.occurrence_id,
+        b.scientific_name,
+        b.common_name,
+        b.event_date,
+        b.decimal_latitude AS bio_lat,
+        b.decimal_longitude AS bio_lon,
+        b.ocean_basin,
+        m.platform_number AS float_wmo,
+        m.time AS float_time,
+        m.latitude AS float_lat,
+        m.longitude AS float_lon,
+        m.temp,
+        m.psal,
+        m.doxy,
+        m.chla,
+        ROUND((ST_Distance(m.geom, b.geom) / 1000.0)::numeric, 2) AS distance_km
+    FROM public.marine_biodiversity b
+    CROSS JOIN LATERAL (
+        SELECT platform_number, time, latitude, longitude, geom, temp, psal, doxy, chla
+        FROM public.marine_data m
+        WHERE ST_DWithin(m.geom, b.geom, 50000)
+          AND m.time BETWEEN (b.event_date - INTERVAL '7 days') AND (b.event_date + INTERVAL '7 days')
+          AND m.pres < 25.0
+          AND (m.temp IS NOT NULL OR m.psal IS NOT NULL)
+        ORDER BY m.geom <-> b.geom
+        LIMIT 1
+    ) m
+    WHERE (b.scientific_name ILIKE %s OR b.common_name ILIKE %s)
+      AND b.event_date >= (CURRENT_DATE - (INTERVAL '1 day' * %s))
+    ORDER BY b.event_date DESC
+    LIMIT %s;
+    """
+    # Execute parameterized query safely
+```
+
 ---
 
 ## 4. Daily Milestone & Deliverable Checklist (Aug 15 - Aug 24)

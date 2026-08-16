@@ -38,6 +38,10 @@ Member 4 is responsible for the interactive command center experience of VARUNA:
 
 ## 3. Technical Specifications & Implementation Blueprints
 
+### 3.1 Live Agent Execution DAG Visualizer (`frontend/components/AgentGraph.tsx`)
+
+When the backend returns an `agent_trace` from `/api/v1/agent/chat`, the `AgentGraph` renders the live execution workflow:
+
 ```mermaid
 graph TD
     classDef pending fill:#1e293b,stroke:#475569,color:#94a3b8;
@@ -59,6 +63,34 @@ graph TD
     Task4 --> Synthesizer["Synthesizer Agent<br/>540ms"]:::done
     Task5 --> Synthesizer
 ```
+
+#### Component Interface (`AgentGraph.tsx`):
+```tsx
+export interface AgentTaskStep {
+  task_id: string;
+  agent_type: "PLANNER" | "SQL_GEN" | "RETRIEVAL" | "BIODIVERSITY" | "ANOMALY" | "COMPARISON" | "SYNTHESIZER";
+  description: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  duration_ms?: number;
+  result_summary?: string;
+  dependencies?: string[];
+}
+
+export interface AgentGraphProps {
+  planId?: string;
+  steps: AgentTaskStep[];
+  isExecuting?: boolean;
+}
+```
+
+---
+
+### 3.2 Design System Tokens & Fluid Glassmorphism
+
+Advay ensures compliance with VARUNA's strict, award-winning dark ocean design system (in `globals.css`):
+- **Liquid Glass (`.glass`)**: `backdrop-filter: blur(20px) saturate(180%)`, physical edge light refraction (`inset 0 1px 0 rgba(255,255,255,0.08)`).
+- **Zero AI Slop**: No generic floating purple gradients. Every visual element reflects ocean physics (depth stratification, bioluminescent green `#00FFC6`, tropical aqua `#2EE6C6`, deep abyss `#051421`).
+- **Micro-Animations**: Framer Motion spring physics on dock navigation, skeleton shimmers during streaming, kinetic marquee on status bar.
 
 ---
 

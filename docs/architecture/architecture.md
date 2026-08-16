@@ -1,4 +1,4 @@
-﻿# VARUNA — Architecture Documentation
+# VARUNA — Architecture Documentation
 
 ## 1. System Architecture
 
@@ -166,24 +166,26 @@ GET /api/v1/export
 
 ---
 
-## 5. Infrastructure
+## 5. Zero-Docker Native Infrastructure
 
-### docker-compose.yml services
+### Native Production Services
+- **PostgreSQL 16 with PostGIS 3.4**: Local database cluster (`port 5432`) managing `public.marine_data`, `public.marine_biodiversity`, and `public.anomaly_alerts`.
+- **Qdrant Vector Database**: Native binary (`port 6333`) or Qdrant Cloud cluster managing 3 semantic namespaces (`argo_knowledge`, `argo_schema`, `bio_knowledge`).
+- **Redis 7.2**: In-memory caching & session sliding-window store (`port 6379`), with in-process dictionary fallback.
+- **OpenRouter HTTPS API**: Cloud LLM inference endpoint routing all generation to `nvidia/nemotron-ultra-550b-a55b:free` (Zero local model baggage).
 
-postgres:
-  image: postgis/postgis:16-3.4
-  environment: POSTGRES_USER=argo_admin, POSTGRES_PASSWORD=argo_password, POSTGRES_DB=argo_data
-  port: 5432
+---
 
-qdrant:
-  image: qdrant/qdrant:v1.9.0
-  port: 6333
-
-redis:
-  image: redis:7.2-alpine
-  port: 6379
-
-NOTE: Ollama service REMOVED. All LLM inference goes to OpenRouter via HTTPS.
+## 6. Comprehensive Architecture Specification Series
+- [01_SYSTEM_OVERVIEW.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/01_SYSTEM_OVERVIEW.md) — Master architecture and subsystems
+- [02_MULTI_AGENT_ORCHESTRATION.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/02_MULTI_AGENT_ORCHESTRATION.md) — Task DAG execution engine
+- [03_NETCDF_INGESTION_AND_HPC_ETL.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/03_NETCDF_INGESTION_AND_HPC_ETL.md) — NetCDF V3.1 parsing specs
+- [04_CMLRE_BIODIVERSITY_FUSION.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/04_CMLRE_BIODIVERSITY_FUSION.md) — Darwin Core cross-domain joins
+- [05_PROACTIVE_ANOMALY_ENGINE.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/05_PROACTIVE_ANOMALY_ENGINE.md) — Hobday MHW and Hypoxia formulas
+- [06_DATABASE_AND_VECTOR_SCHEMA.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/06_DATABASE_AND_VECTOR_SCHEMA.md) — PostgreSQL + Qdrant DDLs
+- [07_LLM_OPENROUTER_ENGINE.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/07_LLM_OPENROUTER_ENGINE.md) — OpenRouter Nemotron integration
+- [08_FRONTEND_OPERATIONS_CENTER.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/08_FRONTEND_OPERATIONS_CENTER.md) — Command center HUD design
+- [CELLULAR_TECHNICAL_CHECKLIST.md](file:///e:/Hackathons/floatchatai-main/docs/architecture/CELLULAR_TECHNICAL_CHECKLIST.md) — Cellular codebase audit
 
 ---
 
