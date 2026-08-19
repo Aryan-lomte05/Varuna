@@ -31,17 +31,20 @@ class Settings(BaseSettings):
     # ── Redis ──────────────────────────────────────────
     redis_url: str = Field("redis://localhost:6379/0", alias="REDIS_URL")
 
-    # ── Ollama / OpenRouter / Cloud API ─────────────────────
+    # ── OpenRouter / Cloud Cognitive API ────────────────
+    openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
+    openrouter_base_url: str = Field("https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
+    openrouter_model: str = Field("nvidia/nemotron-ultra-550b-a55b:free", alias="OPENROUTER_MODEL")
+    openrouter_embed_model: str = Field("nomic-ai/nomic-embed-text-v1.5:free", alias="OPENROUTER_EMBED_MODEL")
+    hf_token: str = Field("", alias="HF_TOKEN")
+
+    # ── Legacy Offline Fallback Settings (Never in Primary Flow) ──
     ollama_url: str = Field("http://localhost:11434", alias="OLLAMA_URL")
     ollama_sql_model: str = Field("qwen2.5:7b", alias="OLLAMA_SQL_MODEL")
     ollama_narrate_model: str = Field("llama3:8b", alias="OLLAMA_NARRATE_MODEL")
     ollama_embed_model: str = Field("nomic-embed-text", alias="OLLAMA_EMBED_MODEL")
     ollama_rewrite_model: str = Field("qwen2.5:7b", alias="OLLAMA_REWRITE_MODEL")
     ollama_code_model: str = Field("qwen2.5:7b", alias="OLLAMA_CODE_MODEL")
-
-    openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
-    openrouter_model: str = Field("nvidia/nemotron-4-340b-instruct", alias="OPENROUTER_MODEL")
-    hf_token: str = Field("", alias="HF_TOKEN")
 
     # ── RAG ────────────────────────────────────────────
     rag_top_k: int = Field(12, alias="RAG_TOP_K")
