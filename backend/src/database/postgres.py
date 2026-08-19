@@ -97,12 +97,10 @@ def run_sql(sql: str, params: Optional[dict] = None, limit: int = 500) -> List[D
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(s, params or {})
-                rows = cur.fetchall()
-                return [dict(r) for r in rows]
     except Exception:
-        # Fallback to DuckDB engine
-        from src.database.duckdb_client import query_parquet
+        # Fallback to DuckDB engine if available
         try:
+            from src.database.duckdb_client import query_parquet
             return query_parquet(s, limit=limit)
         except Exception:
             return []

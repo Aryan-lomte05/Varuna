@@ -281,13 +281,20 @@ async def upsert_chunks(chunks: List[Dict[str, Any]]):
     )
 
 
-# ━━ Singleton retriever ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-_retriever: Optional[HybridRetriever] = None
-
-
 async def get_retriever() -> HybridRetriever:
     global _retriever
     if _retriever is None:
         _retriever = HybridRetriever()
         await _retriever.initialize()
     return _retriever
+
+
+async def retrieve_hybrid(query: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    """Convenience helper for hybrid retrieval."""
+    try:
+        retriever = await get_retriever()
+        return await retriever.retrieve(query, top_k=top_k)
+    except Exception:
+        from src.database.qdrant import search_similar
+        return await search_similar(query, limit=top_k)
+
