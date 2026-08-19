@@ -93,48 +93,48 @@ def _extract_days(text: str) -> int:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class TaskExecutionStep(BaseModel):
-    task_id: str = Field(..., example="task_01_sql")
-    agent_type: str = Field(..., example="SQL_GEN_AGENT")
-    description: str = Field(..., example="Query Arabian Sea dissolved oxygen and temperature for last 6 months")
-    status: str = Field(..., example="COMPLETED")
-    duration_ms: float = Field(..., example=342.5)
-    result_summary: Optional[str] = Field(None, example="Returned 24 monthly aggregated rows from public.marine_data")
+    task_id: str = Field(..., examples=["task_01_sql"])
+    agent_type: str = Field(..., examples=["SQL_GEN_AGENT"])
+    description: str = Field(..., examples=["Query Arabian Sea dissolved oxygen and temperature for last 6 months"])
+    status: str = Field(..., examples=["COMPLETED"])
+    duration_ms: float = Field(..., examples=[342.5])
+    result_summary: Optional[str] = Field(None, examples=["Returned 24 monthly aggregated rows from public.marine_data"])
 
 class AgentExecutionTrace(BaseModel):
-    plan_id: str = Field(..., example="plan_9f82b1c4")
-    total_latency_ms: float = Field(..., example=1240.2)
-    planner_model: str = Field(..., example="nvidia/nemotron-ultra-550b-a55b:free")
+    plan_id: str = Field(..., examples=["plan_9f82b1c4"])
+    total_latency_ms: float = Field(..., examples=[1240.2])
+    planner_model: str = Field(..., examples=["nvidia/nemotron-ultra-550b-a55b:free"])
     tasks: List[TaskExecutionStep] = Field(default_factory=list)
-    topological_order: List[str] = Field(default_factory=list, example=["task_01_sql", "task_02_bio", "task_03_synth"])
+    topological_order: List[str] = Field(default_factory=list, examples=[["task_01_sql", "task_02_bio", "task_03_synth"]])
 
 class ChatIn(BaseModel):
     question: Optional[str] = Field(
         None,
         description="Natural language oceanographic query",
-        example="Compare dissolved oxygen in Arabian Sea last 6 months vs equator and show affected sardine populations."
+        examples=["Compare dissolved oxygen in Arabian Sea last 6 months vs equator and show affected sardine populations."]
     )
     query: Optional[str] = Field(None, description="Alternative alias for question")
-    session_id: Optional[str] = Field("default", description="Unique session identifier for multi-turn conversational memory", example="scientist_session_482")
+    session_id: Optional[str] = Field("default", description="Unique session identifier for multi-turn conversational memory", examples=["scientist_session_482"])
     session: Optional[str] = Field(None, description="Alternative alias for session_id")
-    user_lat: Optional[float] = Field(None, description="User latitude anchor for geographic proximity queries", example=18.92)
-    user_lon: Optional[float] = Field(None, description="User longitude anchor for geographic proximity queries", example=72.83)
+    user_lat: Optional[float] = Field(None, description="User latitude anchor for geographic proximity queries", examples=[18.92])
+    user_lon: Optional[float] = Field(None, description="User longitude anchor for geographic proximity queries", examples=[72.83])
 
 class ChatOut(BaseModel):
-    ok: bool = Field(True, example=True)
+    ok: bool = Field(True, examples=[True])
     answer_markdown: Optional[str] = Field(
         None,
         description="Grounded scientific answer formatted in GitHub-flavored Markdown with provenance citations.",
-        example="### 🌊 Marine Ecosystem Assessment: Arabian Sea vs Equatorial Indian Ocean\n\nSurface temperatures in the Arabian Sea averaged **29.14°C** (+1.8°C above 30-year climatological baseline) [WMO: 1902303 | Row #4]. Dissolved oxygen levels in the upper 200m dropped to **42.1 µmol/kg**, indicating severe hypoxic compression.\n\n* **Affected Species**: *Sardinella longiceps* (Indian Oil Sardine) thermal tolerance envelope ($22-26°C$) exceeded by **3.14°C**, forcing schooling biomass into deeper bathymetric strata."
+        examples=["### 🌊 Marine Ecosystem Assessment: Arabian Sea vs Equatorial Indian Ocean\n\nSurface temperatures in the Arabian Sea averaged **29.14°C** (+1.8°C above 30-year climatological baseline) [WMO: 1902303 | Row #4]. Dissolved oxygen levels in the upper 200m dropped to **42.1 µmol/kg**, indicating severe hypoxic compression.\n\n* **Affected Species**: *Sardinella longiceps* (Indian Oil Sardine) thermal tolerance envelope ($22-26°C$) exceeded by **3.14°C**, forcing schooling biomass into deeper bathymetric strata."]
     )
     sql: Optional[str] = Field(
         None,
         description="Sanitized PostGIS SQL query executed to retrieve physical measurements.",
-        example="SELECT DATE_TRUNC('month', time) AS month, AVG(temp) AS avg_temp, AVG(doxy) AS avg_doxy FROM public.marine_data WHERE time >= NOW() - INTERVAL '6 months' AND latitude BETWEEN 10.0 AND 25.0 AND longitude BETWEEN 55.0 AND 75.0 GROUP BY 1 ORDER BY 1 ASC LIMIT 100;"
+        examples=["SELECT DATE_TRUNC('month', time) AS month, AVG(temp) AS avg_temp, AVG(doxy) AS avg_doxy FROM public.marine_data WHERE time >= NOW() - INTERVAL '6 months' AND latitude BETWEEN 10.0 AND 25.0 AND longitude BETWEEN 55.0 AND 75.0 GROUP BY 1 ORDER BY 1 ASC LIMIT 100;"]
     )
     rows: Optional[List[Dict[str, Any]]] = Field(
         None,
         description="Raw columnar tabular rows returned by the query.",
-        example=[{"month": "2026-03-01", "avg_temp": 28.45, "avg_doxy": 52.1}, {"month": "2026-04-01", "avg_temp": 29.14, "avg_doxy": 42.1}]
+        examples=[[{"month": "2026-03-01", "avg_temp": 28.45, "avg_doxy": 52.1}, {"month": "2026-04-01", "avg_temp": 29.14, "avg_doxy": 42.1}]]
     )
     agent_trace: Optional[AgentExecutionTrace] = Field(
         None,
@@ -143,127 +143,131 @@ class ChatOut(BaseModel):
     viz_specs: Optional[Dict[str, Any]] = Field(
         None,
         description="Automated Plotly chart configuration suggested by the synthesizer.",
-        example={"chart_type": "hovmoller_contour", "x_variable": "time", "y_variable": "depth", "z_variable": "doxy"}
+        examples=[{"chart_type": "hovmoller_contour", "x_variable": "time", "y_variable": "depth", "z_variable": "doxy"}]
     )
-    float_ids: Optional[List[str]] = Field(None, description="Referenced ARGO float platform numbers", example=["1902303", "2901742"])
-    intent: Optional[str] = Field(None, example="CROSS_DOMAIN_COMPOUND")
-    trace_id: Optional[str] = Field(None, example="3f8b7e21-00a1-4a89-91c2-1482847a9e10")
-    error: Optional[str] = Field(None, example=None)
+    float_ids: Optional[List[str]] = Field(None, description="Referenced ARGO float platform numbers", examples=[["1902303", "2901742"]])
+    intent: Optional[str] = Field(None, examples=["CROSS_DOMAIN_COMPOUND"])
+    trace_id: Optional[str] = Field(None, examples=["3f8b7e21-00a1-4a89-91c2-1482847a9e10"])
+    error: Optional[str] = Field(None, examples=[None])
 
 class FeedbackIn(BaseModel):
-    session: str = Field(..., example="scientist_session_482")
-    query: str = Field(..., example="Show salinity profile for float 1902303")
-    sql_generated: Optional[str] = Field(None, example="SELECT depth, psal FROM public.marine_data WHERE platform_number = 1902303;")
-    answer: Optional[str] = Field(None, example="Salinity profile shows halocline at 120m.")
-    rating: int = Field(..., description="1 to 5 star rating", ge=1, le=5, example=5)
-    correction: Optional[str] = Field(None, example="Depth units should be decibars")
-    trace_id: Optional[str] = Field(None, example="3f8b7e21-00a1-4a89-91c2-1482847a9e10")
+    session: str = Field(..., examples=["scientist_session_482"])
+    query: str = Field(..., examples=["Show salinity profile for float 1902303"])
+    sql_generated: Optional[str] = Field(None, examples=["SELECT depth, psal FROM public.marine_data WHERE platform_number = 1902303;"])
+    answer: Optional[str] = Field(None, examples=["Salinity profile shows halocline at 120m."])
+    rating: int = Field(..., description="1 to 5 star rating", ge=1, le=5, examples=[5])
+    correction: Optional[str] = Field(None, examples=["Depth units should be decibars"])
+    trace_id: Optional[str] = Field(None, examples=["3f8b7e21-00a1-4a89-91c2-1482847a9e10"])
 
 class AnomalyAlert(BaseModel):
-    id: int = Field(..., example=101)
-    alert_type: str = Field(..., description="MARINE_HEATWAVE | HYPOXIA | SALINITY_ANOMALY", example="MARINE_HEATWAVE")
-    severity: str = Field(..., description="MODERATE | STRONG | SEVERE | EXTREME", example="SEVERE")
-    ocean_basin: str = Field(..., example="arabian_sea")
-    lat_min: float = Field(..., example=14.0)
-    lat_max: float = Field(..., example=18.0)
-    lon_min: float = Field(..., example=66.0)
-    lon_max: float = Field(..., example=72.0)
-    metric_name: str = Field(..., example="sea_surface_temperature")
-    current_value: float = Field(..., description="Observed SST in °C", example=31.2)
-    baseline_value: float = Field(..., description="30-year climatological mean in °C", example=28.1)
-    anomaly_value: float = Field(..., description="Departure from climatological baseline (+°C)", example=3.1)
-    duration_days: int = Field(..., description="Consecutive days above P90 threshold (Hobday 2016)", example=8)
+    id: int = Field(..., examples=[101])
+    alert_type: str = Field(..., description="MARINE_HEATWAVE | HYPOXIA | SALINITY_ANOMALY", examples=["MARINE_HEATWAVE"])
+    severity: str = Field(..., description="MODERATE | STRONG | SEVERE | EXTREME", examples=["SEVERE"])
+    ocean_basin: str = Field(..., examples=["arabian_sea"])
+    lat_min: float = Field(..., examples=[14.0])
+    lat_max: float = Field(..., examples=[18.0])
+    lon_min: float = Field(..., examples=[66.0])
+    lon_max: float = Field(..., examples=[72.0])
+    metric_name: str = Field(..., examples=["sea_surface_temperature"])
+    current_value: float = Field(..., description="Observed SST in °C", examples=[31.2])
+    baseline_value: float = Field(..., description="30-year climatological mean in °C", examples=[28.1])
+    anomaly_value: float = Field(..., description="Departure from climatological baseline (+°C)", examples=[3.1])
+    duration_days: int = Field(..., description="Consecutive days above P90 threshold (Hobday 2016)", examples=[8])
     affected_species: List[Dict[str, Any]] = Field(
         default_factory=list,
-        example=[
-            {
-                "scientific_name": "Sardinella longiceps",
-                "common_name": "Indian Oil Sardine",
-                "thermal_optimum": "22-26°C",
-                "impact": "Biomass displacement to deeper waters (>100m)."
-            },
-            {
-                "scientific_name": "Acropora millepora",
-                "common_name": "Staghorn Coral",
-                "thermal_optimum": "24-28°C",
-                "impact": "Critical thermal bleaching risk (Degree Heating Weeks: 8.4)."
-            }
+        examples=[
+            [
+                {
+                    "scientific_name": "Sardinella longiceps",
+                    "common_name": "Indian Oil Sardine",
+                    "thermal_optimum": "22-26°C",
+                    "impact": "Biomass displacement to deeper waters (>100m)."
+                },
+                {
+                    "scientific_name": "Acropora millepora",
+                    "common_name": "Staghorn Coral",
+                    "thermal_optimum": "24-28°C",
+                    "impact": "Critical thermal bleaching risk (Degree Heating Weeks: 8.4)."
+                }
+            ]
         ]
     )
     policy_advisory: str = Field(
         ...,
-        example="Fisheries advisory issued for Maharashtra and Goa coastal belts: Pelagic schools dispersed into deeper strata; bottom trawling restrictions advised."
+        examples=["Fisheries advisory issued for Maharashtra and Goa coastal belts: Pelagic schools dispersed into deeper strata; bottom trawling restrictions advised."]
     )
-    created_at: str = Field(..., example="2026-08-16T12:00:00Z")
+    created_at: str = Field(..., examples=["2026-08-16T12:00:00Z"])
 
 class BiodiversityRecord(BaseModel):
-    id: int = Field(..., example=501)
-    scientific_name: str = Field(..., example="Sardinella longiceps")
-    common_name: str = Field(..., example="Indian Oil Sardine")
-    aphia_id: int = Field(..., description="World Register of Marine Species (WoRMS) Taxon Identifier", example=218659)
-    kingdom: str = Field("Animalia", example="Animalia")
-    phylum: str = Field("Chordata", example="Chordata")
-    family: str = Field("Clupeidae", example="Clupeidae")
-    latitude: float = Field(..., example=15.42)
-    longitude: float = Field(..., example=73.81)
-    depth_m: Optional[float] = Field(15.0, example=15.0)
-    event_date: str = Field(..., example="2026-04-14")
-    thermal_range_min_c: float = Field(22.0, example=22.0)
-    thermal_range_max_c: float = Field(26.0, example=26.0)
-    institution_code: str = Field("CMLRE", example="CMLRE")
+    id: int = Field(..., examples=[501])
+    scientific_name: str = Field(..., examples=["Sardinella longiceps"])
+    common_name: str = Field(..., examples=["Indian Oil Sardine"])
+    aphia_id: int = Field(..., description="World Register of Marine Species (WoRMS) Taxon Identifier", examples=[218659])
+    kingdom: str = Field("Animalia", examples=["Animalia"])
+    phylum: str = Field("Chordata", examples=["Chordata"])
+    family: str = Field("Clupeidae", examples=["Clupeidae"])
+    latitude: float = Field(..., examples=[15.42])
+    longitude: float = Field(..., examples=[73.81])
+    depth_m: Optional[float] = Field(15.0, examples=[15.0])
+    event_date: str = Field(..., examples=["2026-04-14"])
+    thermal_range_min_c: float = Field(22.0, examples=[22.0])
+    thermal_range_max_c: float = Field(26.0, examples=[26.0])
+    institution_code: str = Field("CMLRE", examples=["CMLRE"])
 
 class SpatialCorrelationRecord(BaseModel):
-    species_name: str = Field(..., example="Sardinella longiceps")
-    common_name: str = Field(..., example="Indian Oil Sardine")
-    bio_lat: float = Field(..., example=15.42)
-    bio_lon: float = Field(..., example=73.81)
-    bio_date: str = Field(..., example="2026-04-14")
-    nearest_float_wmo: int = Field(..., example=1902303)
-    float_lat: float = Field(..., example=15.58)
-    float_lon: float = Field(..., example=73.95)
-    float_time: str = Field(..., example="2026-04-15T06:12:00Z")
-    spatial_distance_km: float = Field(..., example=23.4)
-    temporal_delta_days: float = Field(..., example=0.75)
-    in_situ_temperature: float = Field(..., description="Observed ocean temperature at matching float profile in °C", example=29.4)
-    in_situ_salinity: float = Field(..., description="Observed practical salinity (PSU)", example=35.8)
-    in_situ_doxy: float = Field(..., description="Observed dissolved oxygen (µmol/kg)", example=44.2)
-    thermal_stress_delta: float = Field(..., description="Departure from species thermal optimum maximum (+°C)", example=3.4)
+    species_name: str = Field(..., examples=["Sardinella longiceps"])
+    common_name: str = Field(..., examples=["Indian Oil Sardine"])
+    bio_lat: float = Field(..., examples=[15.42])
+    bio_lon: float = Field(..., examples=[73.81])
+    bio_date: str = Field(..., examples=["2026-04-14"])
+    nearest_float_wmo: int = Field(..., examples=[1902303])
+    float_lat: float = Field(..., examples=[15.58])
+    float_lon: float = Field(..., examples=[73.95])
+    float_time: str = Field(..., examples=["2026-04-15T06:12:00Z"])
+    spatial_distance_km: float = Field(..., examples=[23.4])
+    temporal_delta_days: float = Field(..., examples=[0.75])
+    in_situ_temperature: float = Field(..., description="Observed ocean temperature at matching float profile in °C", examples=[29.4])
+    in_situ_salinity: float = Field(..., description="Observed practical salinity (PSU)", examples=[35.8])
+    in_situ_doxy: float = Field(..., description="Observed dissolved oxygen (µmol/kg)", examples=[44.2])
+    thermal_stress_delta: float = Field(..., description="Departure from species thermal optimum maximum (+°C)", examples=[3.4])
 
 class MHWForecastRequest(BaseModel):
-    ocean_basin: str = Field("arabian_sea", example="arabian_sea")
-    forecast_days: int = Field(7, description="Forecast horizon in days (7 or 14)", example=7)
+    ocean_basin: str = Field("arabian_sea", examples=["arabian_sea"])
+    forecast_days: int = Field(7, description="Forecast horizon in days (7 or 14)", examples=[7])
 
 class MHWForecastResponse(BaseModel):
-    ocean_basin: str = Field(..., example="arabian_sea")
-    forecast_horizon_days: int = Field(..., example=7)
-    predicted_mean_anomaly: float = Field(..., example=2.4)
-    mhw_declaration_probability: float = Field(..., example=0.88)
+    ocean_basin: str = Field(..., examples=["arabian_sea"])
+    forecast_horizon_days: int = Field(..., examples=[7])
+    predicted_mean_anomaly: float = Field(..., examples=[2.4])
+    mhw_declaration_probability: float = Field(..., examples=[0.88])
     forecast_time_series: List[Dict[str, Any]] = Field(
         default_factory=list,
-        example=[
-            {"date": "2026-08-17", "predicted_sst": 30.1, "climatological_baseline": 28.1, "anomaly": 2.0},
-            {"date": "2026-08-18", "predicted_sst": 30.3, "climatological_baseline": 28.1, "anomaly": 2.2},
-            {"date": "2026-08-19", "predicted_sst": 30.6, "climatological_baseline": 28.1, "anomaly": 2.5},
-            {"date": "2026-08-20", "predicted_sst": 30.8, "climatological_baseline": 28.1, "anomaly": 2.7},
-            {"date": "2026-08-21", "predicted_sst": 31.0, "climatological_baseline": 28.1, "anomaly": 2.9},
-            {"date": "2026-08-22", "predicted_sst": 31.2, "climatological_baseline": 28.1, "anomaly": 3.1},
-            {"date": "2026-08-23", "predicted_sst": 31.3, "climatological_baseline": 28.1, "anomaly": 3.2}
+        examples=[
+            [
+                {"date": "2026-08-17", "predicted_sst": 30.1, "climatological_baseline": 28.1, "anomaly": 2.0},
+                {"date": "2026-08-18", "predicted_sst": 30.3, "climatological_baseline": 28.1, "anomaly": 2.2},
+                {"date": "2026-08-19", "predicted_sst": 30.6, "climatological_baseline": 28.1, "anomaly": 2.5},
+                {"date": "2026-08-20", "predicted_sst": 30.8, "climatological_baseline": 28.1, "anomaly": 2.7},
+                {"date": "2026-08-21", "predicted_sst": 31.0, "climatological_baseline": 28.1, "anomaly": 2.9},
+                {"date": "2026-08-22", "predicted_sst": 31.2, "climatological_baseline": 28.1, "anomaly": 3.1},
+                {"date": "2026-08-23", "predicted_sst": 31.3, "climatological_baseline": 28.1, "anomaly": 3.2}
+            ]
         ]
     )
 
 class ProfileQCRequest(BaseModel):
-    platform_number: int = Field(..., example=1902303)
-    pressures: List[float] = Field(..., example=[5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0])
-    temperatures: List[float] = Field(..., example=[29.4, 29.3, 28.8, 26.2, 21.0, 14.5, 9.2, 5.1])
-    salinities: List[float] = Field(..., example=[35.8, 35.8, 35.9, 36.1, 35.7, 35.2, 34.9, 34.8])
+    platform_number: int = Field(..., examples=[1902303])
+    pressures: List[float] = Field(..., examples=[[5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0]])
+    temperatures: List[float] = Field(..., examples=[[29.4, 29.3, 28.8, 26.2, 21.0, 14.5, 9.2, 5.1]])
+    salinities: List[float] = Field(..., examples=[[35.8, 35.8, 35.9, 36.1, 35.7, 35.2, 34.9, 34.8]])
 
 class ProfileQCResponse(BaseModel):
-    platform_number: int = Field(..., example=1902303)
-    is_anomalous: bool = Field(False, example=False)
-    reconstruction_mse: float = Field(0.0034, example=0.0034)
-    detected_sensor_issue: Optional[str] = Field(None, example=None)
-    recommended_qc_flag: int = Field(1, description="1=Good, 2=Probably Good, 3=Potentially Correctable, 4=Bad", example=1)
-    status_message: str = Field("Profile curve matches expected hydrostatic physical profile.", example="Profile curve matches expected hydrostatic physical profile.")
+    platform_number: int = Field(..., examples=[1902303])
+    is_anomalous: bool = Field(False, examples=[False])
+    reconstruction_mse: float = Field(0.0034, examples=[0.0034])
+    detected_sensor_issue: Optional[str] = Field(None, examples=[None])
+    recommended_qc_flag: int = Field(1, description="1=Good, 2=Probably Good, 3=Potentially Correctable, 4=Bad", examples=[1])
+    status_message: str = Field("Profile curve matches expected hydrostatic physical profile.", examples=["Profile curve matches expected hydrostatic physical profile."])
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -5,6 +5,9 @@ from src.database.postgres import get_pool
 
 def check_tables():
     pool = get_pool()
+    if pool is None:
+        print("Database pool is not configured or unavailable.")
+        return
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
