@@ -95,7 +95,7 @@ async def answer(
     sql = extract_sql(raw_sql)
 
     try:
-        clean_sql = sanitize_sql(sql)
+        clean_sql = sanitize_sql(sql or "")
     except Exception:
         clean_sql = "SELECT platform_number, time, latitude, longitude, temp, psal, doxy FROM public.marine_data ORDER BY time DESC LIMIT 50;"
 
