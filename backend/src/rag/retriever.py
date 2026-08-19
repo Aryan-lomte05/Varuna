@@ -189,14 +189,16 @@ class HybridRetriever:
 
         vector_results = []
         try:
-            vector_results = get_qdrant().search(
-                collection_name=settings.qdrant_collection,
-                query_vector=qvec,
-                limit=candidate_k,
-                query_filter=qdrant_filter,
-                with_payload=True,
-            )
-        except Exception as e:
+            client: Any = get_qdrant()
+            if hasattr(client, "search"):
+                vector_results = client.search(
+                    collection_name=settings.qdrant_collection,
+                    query_vector=qvec,
+                    limit=candidate_k,
+                    query_filter=qdrant_filter,
+                    with_payload=True,
+                )
+        except Exception:
             pass
 
         # ━━ Step 3: Reciprocal Rank Fusion (RRF) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -279,6 +281,10 @@ async def upsert_chunks(chunks: List[Dict[str, Any]]):
         points=points,
         wait=True,
     )
+
+
+# ━━ Singleton retriever ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_retriever: Optional[HybridRetriever] = None
 
 
 async def get_retriever() -> HybridRetriever:

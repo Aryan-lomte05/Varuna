@@ -118,18 +118,21 @@ async def search_similar(
     limit: int = 5,
 ) -> List[Dict[str, Any]]:
     """Search similar passages in a specific Qdrant collection."""
-    client = _get_client()
+    client: Any = _get_client()
     if client is None:
         return []
 
     try:
         from src.llm.embedder import embed_texts
         vector = embed_texts([query])[0]
-        results = client.search(
-            collection_name=collection_name,
-            query_vector=vector,
-            limit=limit,
-        )
+        if hasattr(client, "search"):
+            results = client.search(
+                collection_name=collection_name,
+                query_vector=vector,
+                limit=limit,
+            )
+        else:
+            return []
         return [
             {
                 "id": hit.id,

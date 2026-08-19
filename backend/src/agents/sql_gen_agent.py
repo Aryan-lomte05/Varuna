@@ -80,7 +80,7 @@ async def execute_sql_task(
 
     # Enforce strict AST validation
     try:
-        clean_sql = sanitize_sql(sql_candidate)
+        clean_sql = sanitize_sql(sql_candidate or "")
     except Exception as e:
         log.warning("SQL Sanitization failed, applying fallback query: %s", str(e))
         clean_sql = (

@@ -206,7 +206,7 @@ async def plan_and_execute(
     session_id: str = "default",
     user_lat: Optional[float] = None,
     user_lon: Optional[float] = None,
-) -> Dict[str, Any]:
+) -> Any:
     """
     End-to-end execution of compound query via Multi-Agent Task DAG.
     """
@@ -237,7 +237,7 @@ async def plan_and_execute(
                     elif node.agent == "BIODIVERSITY":
                         from src.api.routes import correlate_species
                         correlations = await correlate_species(species=node.params.get("species", "Sardinella longiceps"))
-                        res = {"correlations": [c.dict() for c in correlations], "species": node.params.get("species")}
+                        res = {"correlations": [c.model_dump() for c in correlations], "species": node.params.get("species")}
                     elif node.agent == "SYNTHESIZER":
                         res = await synthesize_answer(query, task_results=task_results, trace=trace)
                     else:
@@ -259,7 +259,7 @@ async def plan_and_execute(
                     "agent_type": next((n.agent for n in stage_nodes if n.task_id == tid), "UNKNOWN"),
                     "description": f"Executed {tid}",
                     "status": "COMPLETED" if "error" not in result_data else "FAILED",
-                    "duration_ms": float(round(duration_ms, 1)),
+                    "duration_ms": round(duration_ms, 1),
                     "result_summary": f"Returned {result_data.get('row_count', len(result_data))} items",
                 })
 
@@ -277,7 +277,7 @@ async def plan_and_execute(
 
         agent_trace_payload = {
             "plan_id": plan.plan_id,
-            "total_latency_ms": float(round(total_ms, 1)),
+            "total_latency_ms": round(total_ms, 1),
             "planner_model": "nvidia/nemotron-ultra-550b-a55b:free",
             "tasks": execution_steps,
             "topological_order": [t["task_id"] for t in execution_steps],

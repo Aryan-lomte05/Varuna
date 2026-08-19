@@ -97,6 +97,8 @@ def run_sql(sql: str, params: Optional[dict] = None, limit: int = 500) -> List[D
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(s, params or {})
+                rows = cur.fetchall()
+                return [dict(r) for r in rows]
     except Exception:
         # Fallback to DuckDB engine if available
         try:
@@ -322,4 +324,7 @@ def store_feedback(
                  json.dumps(pipeline_trace) if pipeline_trace else None),
             )
             conn.commit()
-            return cur.fetchone()["id"]
+            row = cur.fetchone()
+            if not row:
+                return 0
+            return int(row["id"] if isinstance(row, dict) else row[0])

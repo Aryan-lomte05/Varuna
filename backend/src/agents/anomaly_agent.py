@@ -65,11 +65,13 @@ async def scan_for_anomalies() -> List[Dict[str, Any]]:
     detected_alerts: List[Dict[str, Any]] = []
 
     for basin_info in SURVEILLANCE_BASINS:
-        basin_name = basin_info["basin"]
-        lat_min, lat_max = basin_info["lat_min"], basin_info["lat_max"]
-        lon_min, lon_max = basin_info["lon_min"], basin_info["lon_max"]
-        base_sst = basin_info["climatological_mean_sst"]
-        p90_sst = basin_info["p90_threshold_sst"]
+        basin_name = str(basin_info["basin"])
+        lat_min = float(basin_info["lat_min"])
+        lat_max = float(basin_info["lat_max"])
+        lon_min = float(basin_info["lon_min"])
+        lon_max = float(basin_info["lon_max"])
+        base_sst = float(basin_info["climatological_mean_sst"])
+        p90_sst = float(basin_info["p90_threshold_sst"])
 
         # Query recent in-situ physical profiles from PostgreSQL
         sql = f"""
