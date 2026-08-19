@@ -191,7 +191,7 @@ GET /api/v1/export
 
 ## 6. Competitor Analysis — Why We Beat OceanIQ
 
-OceanIQ (SIH 2025 PS-25040 Winner) — public repo: github.com/PaarthNo1/OceanIQ--AI-Intelligent
+OceanIQ (Prior SIH Reference Benchmark) — public repo: github.com/PaarthNo1/OceanIQ--AI-Intelligent
 
 What OceanIQ did well:
   - Real-time IFREMER/Argo ingestion with automatic DAC detection

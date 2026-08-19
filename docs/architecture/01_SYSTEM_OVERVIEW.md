@@ -2,7 +2,7 @@
 
 > **System Designation**: VARUNA (Vedic Deity of Oceans and Cosmic Waters)  
 > **Classification**: Agentic AI Ocean & Marine Ecosystem Intelligence Platform  
-> **Problem Statement**: Merged SIH PS 25040 (INCOIS FloatChat) + PS 25041 (CMLRE Marine Living Resources)  
+> **Mandate**: National Marine Data Backbone fusing INCOIS Physical Argo Observations + CMLRE Marine Living Resources  
 > **Target Audience**: INCOIS Oceanographers, CMLRE Marine Biologists, State Disaster Management Authorities (SDMAs), Coastal Fisheries Departments  
 
 ---

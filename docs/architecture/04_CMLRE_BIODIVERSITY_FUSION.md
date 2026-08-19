@@ -1,6 +1,6 @@
 # VARUNA Technical Architecture — 04. CMLRE Marine Living Resources & Biodiversity Fusion
 
-> **Core Objective**: Bridge the foundational gap between INCOIS physical oceanographic data (PS 25040) and CMLRE marine living resources data (PS 25041) through standardized Darwin Core ingestion and spatial-temporal entity resolution.
+> **Core Objective**: Bridge the foundational gap between INCOIS physical oceanographic data and CMLRE marine living resources data through standardized Darwin Core ingestion and spatial-temporal entity resolution.
 
 ---
 

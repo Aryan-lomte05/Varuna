@@ -1,6 +1,6 @@
 # VARUNA — Agentic AI Ocean & Marine Ecosystem Intelligence Platform
-### Complete Master Guide — Merged PS (FloatChat 25040 + CMLRE 25041)
-Team: Ctrl Alt Defeat | SIH-track Internal Hackathon
+### Complete Master Guide — Unified Marine Backbone (INCOIS Physical + CMLRE Biodiversity)
+Team: Ctrl Alt Defeat | Smart India Hackathon (SIH) 2026
 
 ---
 
@@ -68,7 +68,7 @@ Both organizations independently expose this data in raw, expert-only formats (N
 
 ## 4. Competitor / Prior-Work Analysis (Slide 3 — Literature Survey)
 
-### OceanIQ (SIH 2025 winning solution for PS 25040, public repo, verified directly)
+### OceanIQ (Prior SIH Reference Benchmark, public repo, verified directly)
 **What it does well:** real-time IFREMER/Argo ingestion with automatic Data Assembly Centre detection, PostgreSQL+PostGIS, dual FAISS indices (profile semantics + schema-linking for NL→SQL), Gemini-based SQL generation with a validator/sanitizer/executor safety chain, JWT auth, rate limiting. Genuinely solid production engineering — acknowledge this directly in your deck; it strengthens your credibility to show you understood a real reference solution rather than a strawman.
 
 **Where it stops — your literature gap statement:**
