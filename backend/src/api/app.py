@@ -1,6 +1,6 @@
 """
 FastAPI application factory for VARUNA — National Marine Data Backbone & Ocean Intelligence Platform.
-Fusing INCOIS ARGO Physical Oceanography (PS 25040) with CMLRE Living Resources (PS 25041).
+Fusing INCOIS ARGO Physical Oceanography with CMLRE Living Resources.
 """
 
 from __future__ import annotations
@@ -23,39 +23,6 @@ log = logging.getLogger("varuna.app")
 TAGS_METADATA = [
     {
         "name": "🤖 Multi-Agent Orchestration & AI Copilot",
-        "description": (
-            "Multi-Agent Task DAG execution engine powered by **NVIDIA Nemotron-Ultra 550B**. "
-            "Decomposes compound oceanographic questions into sub-agent graphs, resolves topological "
-            "dependencies in parallel, enforces strict SQL AST sanitization, and produces cited Markdown answers "
-            "with zero hallucination."
-        ),
-    },
-    {
-        "name": "🚨 Proactive Anomaly & Early-Warning Feed",
-        "description": (
-            "Autonomous statistical surveillance engine computing rolling 30-day baselines and **Hobday et al. (2016)** "
-            "Marine Heatwave $P_{90}$ threshold exceedance ($D \\ge 5\\text{ days}$) across 2°×2° Indian Ocean grid cells. "
-            "Flags severe hypoxia ($DOXY < 60\,\mu\text{mol/kg}$) and generates automated fisheries policy advisories."
-        ),
-    },
-    {
-        "name": "🐟 CMLRE Marine Living Resources & Cross-Domain Fusion",
-        "description": (
-            "National Marine Data Backbone fusing **CMLRE Darwin Core** marine living resource occurrences "
-            "with in-situ physical float measurements via PostGIS spatio-temporal lateral joins "
-            "($\\Delta r \\le 50\\text{ km}, \\Delta t \\le 7\\text{ days}$). Tracks thermal tolerance envelopes and species displacement."
-        ),
-    },
-    {
-        "name": "🛰️ INCOIS ARGO Float Fleet & Depth Profiles",
-        "description": (
-            "Access 3,800+ active ARGO float platforms, 90-day surfacing drift trajectories, "
-            "and vertical CTD/BGC depth cast profiles ($T, S, \text{DOXY}, \text{CHLA}, \text{NITRATE}$ vs Depth $0-2000\\text{m}$)."
-        ),
-    },
-    {
-        "name": "🧠 Predictive ML & Deep Sensor QC",
-        "description": (
         "description": "Multi-agent Task DAG decomp, parallel SQL/RAG sub-agent execution, and provenance synthesis.",
     },
     {
@@ -177,7 +144,7 @@ app.add_api_websocket_route("/ws/chat", ws_chat)
 app.add_api_websocket_route("/api/ws/chat", ws_chat)
 
 
-@app.get("/health", tags=["🔍 Pipeline Observability & RAG Debugger"], summary="Comprehensive System Health Check")
+@app.get("/health", tags=["⚙️ System Health & Provenance Telemetry"], summary="Comprehensive System Health Check")
 async def health():
     """
     Returns live connectivity status for:
@@ -196,7 +163,7 @@ async def health():
             "autonomous_anomaly_scanner": "ACTIVE (6-hour loop)"
         },
         "supported_datasets": [
-            "INCOIS ARGO Float Profiles (PS 25040)",
-            "CMLRE Marine Living Resources Darwin Core (PS 25041)"
+            "INCOIS ARGO Float Profiles",
+            "CMLRE Marine Living Resources Darwin Core"
         ]
     }

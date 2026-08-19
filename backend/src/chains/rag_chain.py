@@ -26,7 +26,7 @@ from src.observability.logger import PipelineTrace  # type: ignore
 
 async def answer(
     question: str,
-    trace: Optional[PipelineTrace] = None,
+    trace: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Pure semantic RAG chain for conceptual questions.

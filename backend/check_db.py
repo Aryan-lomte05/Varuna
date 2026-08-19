@@ -14,7 +14,8 @@ def check_tables():
             tables = cur.fetchall()
             print("Tables in public schema:")
             for t in tables:
-                print(f"- {t['table_name']}")
+                table_name = t["table_name"] if isinstance(t, dict) else t[0]
+                print(f"- {table_name}")
 
 if __name__ == "__main__":
     check_tables()
