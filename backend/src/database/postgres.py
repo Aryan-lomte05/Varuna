@@ -100,6 +100,26 @@ def get_pool(db: str = "db2") -> Optional[ConnectionPool]:
     return _pool_db2
 
 
+def close_pools():
+    """Cleanly terminate background pool worker threads on application shutdown."""
+    global _pool_db1, _pool_db2
+    if _pool_db1 is not None:
+        try:
+            _pool_db1.close()
+        except Exception:
+            pass
+        _pool_db1 = None
+    if _pool_db2 is not None:
+        try:
+            _pool_db2.close()
+        except Exception:
+            pass
+        _pool_db2 = None
+
+import atexit
+atexit.register(close_pools)
+
+
 def _conn(db: str = "db2"):
     """Acquire connection from specific pool."""
     pool = get_pool(db)
