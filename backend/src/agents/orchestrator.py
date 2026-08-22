@@ -19,6 +19,7 @@ from src.agents.sql_gen_agent import execute_sql_task
 from src.agents.retrieval_agent import execute_retrieval_task
 from src.agents.synthesizer_agent import synthesize_answer
 from src.llm.openrouter_client import chat_complete
+from src.config import settings
 from src.observability.tracer import pipeline_span
 
 log = logging.getLogger("varuna.orchestrator")
@@ -209,13 +210,16 @@ async def plan_and_execute(
 ) -> Any:
     """
     End-to-end execution of compound query via Multi-Agent Task DAG.
+    Captures granular per-phase latency breakdown.
     """
     trace_id = str(uuid.uuid4())
     start_total = time.perf_counter()
 
     with pipeline_span(trace_id, query) as trace:
-        # Step 1: Decompose query into Task DAG
+        # Step 1: Decompose query into Task DAG (Planner LLM call)
+        t_plan = time.perf_counter()
         plan = await plan_query(query, trace=trace)
+        planner_latency_ms = round((time.perf_counter() - t_plan) * 1000.0, 1)
         stages = _get_topological_stages(plan)
 
         task_results: Dict[str, Any] = {}
@@ -254,16 +258,18 @@ async def plan_and_execute(
 
             for tid, result_data, duration_ms in results:
                 task_results[tid] = result_data
-                execution_steps.append({
+                step_entry = {
                     "task_id": tid,
                     "agent_type": next((n.agent for n in stage_nodes if n.task_id == tid), "UNKNOWN"),
                     "description": f"Executed {tid}",
                     "status": "COMPLETED" if "error" not in result_data else "FAILED",
                     "duration_ms": round(duration_ms, 1),
                     "result_summary": f"Returned {result_data.get('row_count', len(result_data))} items",
-                })
-
-        total_ms = (time.perf_counter() - start_total) * 1000.0
+                }
+                # Attach sub-agent internal latency breakdown if available
+                if isinstance(result_data, dict) and "latency" in result_data:
+                    step_entry["latency_breakdown"] = result_data["latency"]
+                execution_steps.append(step_entry)
 
         # Step 3: Extract final synthesized result
         final_synth = None
@@ -272,15 +278,39 @@ async def plan_and_execute(
                 final_synth = res
                 break
 
+        synthesizer_latency_ms = 0.0
         if not final_synth:
+            t_synth = time.perf_counter()
             final_synth = await synthesize_answer(query, task_results=task_results, trace=trace)
+            synthesizer_latency_ms = round((time.perf_counter() - t_synth) * 1000.0, 1)
+
+        total_ms = (time.perf_counter() - start_total) * 1000.0
+
+        # Build comprehensive latency breakdown
+        latency_breakdown = {
+            "total_ms": round(total_ms, 1),
+            "planner_llm_ms": planner_latency_ms,
+            "stages": [],
+        }
+        for step in execution_steps:
+            stage_entry = {
+                "task_id": step["task_id"],
+                "agent_type": step["agent_type"],
+                "total_ms": step["duration_ms"],
+            }
+            if "latency_breakdown" in step:
+                stage_entry.update(step["latency_breakdown"])
+            latency_breakdown["stages"].append(stage_entry)
+        if synthesizer_latency_ms > 0:
+            latency_breakdown["final_synthesizer_llm_ms"] = synthesizer_latency_ms
 
         agent_trace_payload = {
             "plan_id": plan.plan_id,
             "total_latency_ms": round(total_ms, 1),
-            "planner_model": "nvidia/nemotron-ultra-550b-a55b:free",
+            "planner_model": settings.openrouter_model,
             "tasks": execution_steps,
             "topological_order": [t["task_id"] for t in execution_steps],
+            "latency_breakdown": latency_breakdown,
         }
 
         from src.api.routes import ChatOut
@@ -295,3 +325,4 @@ async def plan_and_execute(
             intent="MULTI_AGENT_DAG",
             trace_id=trace_id,
         )
+

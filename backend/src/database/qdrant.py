@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import logging
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.config import settings
 from src.llm.embedder import embed_texts
@@ -216,24 +216,24 @@ def seed_qdrant_collections(client: Any) -> None:
     """Ingest and upsert rich domain knowledge into the 3 collections."""
     from qdrant_client.http import models  # type: ignore
 
-    datasets = [
-        ("argo_knowledge", ARGO_KNOWLEDGE_BASE),
-        ("argo_schema", ARGO_SCHEMA_KNOWLEDGE_BASE),
-        ("bio_knowledge", BIO_KNOWLEDGE_BASE),
+    datasets: List[Tuple[str, List[Dict[str, Any]]]] = [
+        ("argo_knowledge", ARGO_KNOWLEDGE_BASE),  # type: ignore[list-item]
+        ("argo_schema", ARGO_SCHEMA_KNOWLEDGE_BASE),  # type: ignore[list-item]
+        ("bio_knowledge", BIO_KNOWLEDGE_BASE),  # type: ignore[list-item]
     ]
 
     for col_name, items in datasets:
         try:
-            texts = [item["text"] for item in items]
+            texts = [str(item["text"]) for item in items]
             vectors = embed_texts(texts)
 
             points = [
                 models.PointStruct(
-                    id=item["id"],
+                    id=int(item["id"]),
                     vector=vectors[idx],
                     payload={
-                        "text": item["text"],
-                        **item.get("payload", {})
+                        "text": str(item["text"]),
+                        **dict(item.get("payload", {}))  # type: ignore[arg-type]
                     }
                 )
                 for idx, item in enumerate(items)
@@ -275,25 +275,17 @@ async def init_qdrant():
         log.warning("Qdrant knowledge seeding skipped: %s", str(e))
 
 
-async def search_similar(
-    query: str,
-    collection_name: str = "argo_knowledge",
-    limit: int = 5,
-) -> List[Dict[str, Any]]:
-    """Search similar passages in a specific Qdrant collection with in-memory fallback."""
-    client: Any = _get_client()
-
 def _in_memory_search(
     query: str,
     collection_name: str = "argo_knowledge",
     limit: int = 5,
 ) -> List[Dict[str, Any]]:
     """Fast semantic/lexical similarity search against local knowledge bases."""
-    local_db = {
+    local_db: List[Dict[str, Any]] = {
         "argo_knowledge": ARGO_KNOWLEDGE_BASE,
         "argo_schema": ARGO_SCHEMA_KNOWLEDGE_BASE,
         "bio_knowledge": BIO_KNOWLEDGE_BASE,
-    }.get(collection_name, ARGO_KNOWLEDGE_BASE)
+    }.get(collection_name, ARGO_KNOWLEDGE_BASE)  # type: ignore[assignment]
 
     q_terms = set(re.findall(r"\w+", query.lower()))
     if not q_terms:
@@ -301,13 +293,13 @@ def _in_memory_search(
 
     scored = []
     for item in local_db:
-        text = item["text"].lower()
+        text = str(item.get("text", "")).lower()
         overlap = sum(1 for t in q_terms if t in text)
         if overlap > 0:
             scored.append({
                 "id": item["id"],
                 "text": item["text"],
-                "score": float(overlap / max(1, len(q_terms))),
+                "score": overlap / max(1, len(q_terms)),
                 "payload": item.get("payload", {})
             })
     scored.sort(key=lambda x: x["score"], reverse=True)

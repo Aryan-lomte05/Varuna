@@ -79,19 +79,28 @@ async def execute_sql_task(
 ) -> Dict[str, Any]:
     """
     Translates task description to SQL, sanitizes the query, and executes against the database.
+    Returns results with granular per-phase latency breakdown.
     """
+    import time as _time
+
+    latency = {}
+
     prompt = f"Generate SQL query for: {task_desc}"
     if params and "query" in params and params["query"].upper().startswith("SELECT"):
         sql_candidate = params["query"]
+        latency["llm_nl2sql_ms"] = 0.0
     else:
+        t_llm = _time.perf_counter()
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
         raw_output = await chat_complete(messages, temperature=0.0, task_tag="sql_gen", trace=trace)
+        latency["llm_nl2sql_ms"] = round((_time.perf_counter() - t_llm) * 1000.0, 1)
         sql_candidate = extract_sql(raw_output)
 
     # Enforce strict AST validation
+    t_san = _time.perf_counter()
     try:
         clean_sql = sanitize_sql(sql_candidate or "")
     except Exception as e:
@@ -101,9 +110,12 @@ async def execute_sql_task(
             "FROM public.marine_data WHERE time >= NOW() - INTERVAL '6 months' "
             "GROUP BY 1 ORDER BY 1 ASC LIMIT 50;"
         )
+    latency["sql_sanitize_ms"] = round((_time.perf_counter() - t_san) * 1000.0, 1)
 
     # Execute against database pool
+    t_db = _time.perf_counter()
     rows = run_sql(clean_sql, limit=200)
+    latency["db_execute_ms"] = round((_time.perf_counter() - t_db) * 1000.0, 1)
 
     # Fallback simulation for offline testing
     if not rows:
@@ -121,4 +133,6 @@ async def execute_sql_task(
         "rows": rows,
         "row_count": len(rows),
         "columns": list(rows[0].keys()) if rows else [],
+        "latency": latency,
     }
+

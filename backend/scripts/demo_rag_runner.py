@@ -24,7 +24,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 # Ensure backend root is on Python path
@@ -266,7 +266,7 @@ def save_reports(results: List[Dict[str, Any]], total_time: float) -> None:
 
     md_lines = [
         "# VARUNA — Ocean Intelligence Multi-Agent Demonstration Evaluation",
-        f"**Generated**: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
+        f"**Generated**: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}  ",
         f"**Database Backbone**: Supabase Dual-Sharded Mesh (`3,961,238` Physical Observations)  ",
         f"**Cognitive Engine**: OpenRouter `{settings.openrouter_model}`  ",
         "",
