@@ -57,19 +57,35 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 try:
-    import torch
-    import torch.nn as nn
+    import torch  # type: ignore
+    import torch.nn as nn  # type: ignore
     _HAS_TORCH = True
-    _Module = nn.Module
+    _Module: Any = nn.Module
 except ImportError:
-    torch = None  # type: ignore
-    nn = None  # type: ignore
+    class _FakeNN:
+        Module = object
+        Conv1d = GELU = Linear = Sequential = Upsample = SmoothL1Loss = lambda *a, **kw: None  # type: ignore
+    class _FakeTorch:
+        Tensor = object
+        float32 = None
+        manual_seed = set_num_threads = load = save = tensor = randperm = randn = lambda *a, **kw: None  # type: ignore
+        class optim:  # type: ignore
+            Adam = lambda *a, **kw: None  # type: ignore
+            class lr_scheduler:  # type: ignore
+                CosineAnnealingLR = lambda *a, **kw: None  # type: ignore
+        class Generator:  # type: ignore
+            def manual_seed(self, s): return self
+        class no_grad:  # type: ignore
+            def __enter__(self): pass
+            def __exit__(self, *a): pass
+    torch = cast(Any, _FakeTorch())
+    nn = cast(Any, _FakeNN())
     _HAS_TORCH = False
-    _Module = object  # type: ignore
+    _Module = object
 from pydantic import BaseModel, Field
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -615,7 +631,7 @@ def score_cast(
     th = thresholds if thresholds is not None else _THRESHOLDS
     assert m is not None and mt and th
     scores, fired, issue, _, _ = _analyze(m, mt, th, resid_std_global, temps, salinities)
-    return bool(any(fired.values())), issue, scores["mse"]
+    return any(fired.values()), issue, scores["mse"]
 
 
 def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
@@ -647,8 +663,8 @@ def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
     assert _MODEL is not None and _META and _THRESHOLDS
     t_start = time.perf_counter()
 
-    ti = np.interp(P_GRID, p, t)
-    si = np.interp(P_GRID, p, s)
+    ti = np.asarray(np.interp(P_GRID, p, t), dtype=np.float64)
+    si = np.asarray(np.interp(P_GRID, p, s), dtype=np.float64)
 
     scores, fired, issue, z_local, z_global = _analyze(
         _MODEL, _META, _THRESHOLDS, _RESID_STD_GLOBAL, ti, si
@@ -668,13 +684,11 @@ def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
 
     return ProfileQCResponse(
         platform_number=request.platform_number,
-        is_anomalous=bool(is_anomalous),
-        reconstruction_mse=float(round(scores["mse"], 6)),
-        flagged_depth_levels=[float(f) for f in flagged],
+        is_anomalous=is_anomalous,
+        reconstruction_mse=round(scores["mse"], 6),
+        flagged_depth_levels=flagged,
         detected_issue=issue,
-        recommended_qc_flag=int(
-            _recommend_flag(is_anomalous, fired["spike"], scores["mse"], issue)
-        ),
+        recommended_qc_flag=_recommend_flag(is_anomalous, fired["spike"], scores["mse"], issue),
     )
 
 

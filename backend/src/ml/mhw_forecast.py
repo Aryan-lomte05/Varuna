@@ -56,19 +56,34 @@ import time
 from math import erf
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import numpy as np
+
 try:
-    import torch
-    import torch.nn as nn
+    import torch  # type: ignore
+    import torch.nn as nn  # type: ignore
     _HAS_TORCH = True
-    _Module = nn.Module
+    _Module: Any = nn.Module
 except ImportError:
-    torch = None  # type: ignore
-    nn = None  # type: ignore
+    class _FakeNN:
+        Module = object
+        ConstantPad1d = Conv1d = GroupNorm = GELU = Sequential = Conv2d = SmoothL1Loss = lambda *a, **kw: None  # type: ignore
+    class _FakeTorch:
+        Tensor = object
+        float32 = None
+        manual_seed = set_num_threads = get_num_threads = load = save = tensor = arange = randperm = randn = lambda *a, **kw: None  # type: ignore
+        class optim:  # type: ignore
+            Adam = lambda *a, **kw: None  # type: ignore
+            class lr_scheduler:  # type: ignore
+                CosineAnnealingLR = lambda *a, **kw: None  # type: ignore
+        class no_grad:  # type: ignore
+            def __enter__(self): pass
+            def __exit__(self, *a): pass
+    torch = cast(Any, _FakeTorch())
+    nn = cast(Any, _FakeNN())
     _HAS_TORCH = False
-    _Module = object  # type: ignore
+    _Module = object
 from pydantic import BaseModel, Field
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -181,8 +196,8 @@ def _spatial_smooth(field: np.ndarray, passes: int = 2) -> np.ndarray:
         k = (0.25, 0.5, 0.25)
         p = np.pad(f, ((1, 1), (0, 0)), mode="edge")
         rows = sum(k[i] * p[i : i + f.shape[0], :] for i in range(3))
-        p = np.pad(rows, ((0, 0), (1, 1)), mode="edge")
-        return sum(k[i] * p[:, i : i + f.shape[1]] for i in range(3))
+        p = np.pad(cast(np.ndarray, rows), ((0, 0), (1, 1)), mode="edge")
+        return cast(np.ndarray, sum(k[i] * p[:, i : i + f.shape[1]] for i in range(3)))
 
     out = field
     for _ in range(passes):
@@ -197,12 +212,12 @@ def _sample_event_params(basin: str, rng: np.random.Generator) -> Dict[str, Any]
     """Sample MHW lifecycle parameters: Gaussian epicenter, rise/decay timescales."""
     win = BASIN_WINDOWS[basin]
     return {
-        "lat": float(rng.uniform(win[0] + 3.0, win[1] - 3.0)),
-        "lon": float(rng.uniform(win[2] + 3.0, win[3] - 3.0)),
-        "peak": float(rng.uniform(2.0, 3.5)),
-        "radius": float(rng.uniform(6.0, 10.0)),
-        "tau_rise": float(rng.uniform(3.0, 5.0)),
-        "tau_decay": float(rng.uniform(5.0, 9.0)),
+        "lat": rng.uniform(win[0] + 3.0, win[1] - 3.0),
+        "lon": rng.uniform(win[2] + 3.0, win[3] - 3.0),
+        "peak": rng.uniform(2.0, 3.5),
+        "radius": rng.uniform(6.0, 10.0),
+        "tau_rise": rng.uniform(3.0, 5.0),
+        "tau_decay": rng.uniform(5.0, 9.0),
         "duration": int(rng.integers(8, 21)),
         "start": 0,
     }
@@ -242,6 +257,7 @@ def generate_synthetic_sample(
     dates = [end_date - timedelta(days=total_days - 1 - t) for t in range(total_days)]
 
     ev = _sample_event_params(basin, rng) if inject_mhw else None
+    kernel = np.zeros_like(lat_m)
     if ev is not None:
         if active_at_end:
             # Established event: visible ramp >= 9 days old and still alive past horizon
