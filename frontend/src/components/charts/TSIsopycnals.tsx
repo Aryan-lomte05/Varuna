@@ -16,107 +16,127 @@ interface TSIsopycnalsProps {
  * Critical tool for physical oceanographers to identify water masses.
  */
 export function TSIsopycnals({ data, title }: TSIsopycnalsProps) {
+  const cleanData = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+    return data
+      .map((d) => ({
+        temp: Number(d.temp ?? d.temperature ?? d.avg_temp),
+        psal: Number(d.psal ?? d.salinity ?? d.avg_psal),
+        pres: Number(d.pres ?? d.pressure ?? d.depth ?? 0),
+      }))
+      .filter((d) => !isNaN(d.temp) && !isNaN(d.psal) && isFinite(d.temp) && isFinite(d.psal));
+  }, [data]);
+
   const plotData = useMemo((): Partial<PlotData>[] => {
-    if (!data || data.length === 0) return [];
+    if (cleanData.length === 0) return [];
 
     // 1. Data Points
-    const traces: Partial<PlotData>[] = [{
-      x: data.map(d => d.psal),
-      y: data.map(d => d.temp),
-      mode: 'markers',
-      name: 'Observations',
-      marker: {
-        size: 6,
-        color: data.map(d => d.pres), // Color by depth
-        colorscale: 'Viridis',
-        reversescale: true,
-        showscale: true,
-        colorbar: {
-          title: { 
-            text: 'Depth',
-            font: { color: '#94A3B8' }
+    const traces: Partial<PlotData>[] = [
+      {
+        x: cleanData.map((d) => d.psal),
+        y: cleanData.map((d) => d.temp),
+        mode: 'markers',
+        name: 'Observations',
+        marker: {
+          size: 7,
+          color: cleanData.map((d) => d.pres),
+          colorscale: 'Viridis',
+          reversescale: true,
+          showscale: true,
+          colorbar: {
+            title: {
+              text: 'Depth (dbar)',
+              font: { color: '#94A3B8' },
+            },
+            tickfont: { color: '#94A3B8' },
           },
-          tickfont: { color: '#94A3B8' },
-        }
+        },
+        type: 'scatter',
       },
-      type: 'scatter'
-    }];
+    ];
 
-    // 2. Isopycnal lines (simplified sigma-t calculation logic for background grid)
-    const sMin = Math.floor(Math.min(...data.map(d => d.psal)) - 1);
-    const sMax = Math.ceil(Math.max(...data.map(d => d.psal)) + 1);
-    const tMin = Math.floor(Math.min(...data.map(d => d.temp)) - 2);
-    const tMax = Math.ceil(Math.max(...data.map(d => d.temp)) + 2);
+    // 2. Isopycnal lines (Sigma-t)
+    const psalValues = cleanData.map((d) => d.psal);
+    const tempValues = cleanData.map((d) => d.temp);
+    const minP = Math.min(...psalValues);
+    const maxP = Math.max(...psalValues);
+    const minT = Math.min(...tempValues);
+    const maxT = Math.max(...tempValues);
 
-    const sRange = Array.from({ length: 20 }, (_, i) => sMin + (i * (sMax - sMin) / 19));
-    const tRange = Array.from({ length: 20 }, (_, i) => tMin + (i * (tMax - tMin) / 19));
+    const sMin = isFinite(minP) ? Math.floor(minP - 0.5) : 34;
+    const sMax = isFinite(maxP) ? Math.ceil(maxP + 0.5) : 37;
+    const tMin = isFinite(minT) ? Math.floor(minT - 1) : 10;
+    const tMax = isFinite(maxT) ? Math.ceil(maxT + 1) : 32;
 
-    // For a real app, we'd use TEOS-10 / gsw. Here we use a simplified polynomial for Sig-T
+    const sRange = Array.from({ length: 20 }, (_, i) => sMin + (i * (sMax - sMin)) / 19);
+    const tRange = Array.from({ length: 20 }, (_, i) => tMin + (i * (tMax - tMin)) / 19);
+
     const calcSigma = (T: number, S: number) => {
       return 28.106 - 0.0735 * T - 0.00469 * T * T + (0.802 - 0.002 * T) * (S - 35);
     };
 
-    // Generate contour lines (Iso-density)
-    [24, 25, 26, 27, 28].forEach(sig => {
+    [23, 24, 25, 26, 27, 28].forEach((sig) => {
       const x: number[] = [];
       const y: number[] = [];
-      sRange.forEach(s => {
-        // Solve for T: simplified reversal
-        tRange.forEach(t => {
-          if (Math.abs(calcSigma(t, s) - sig) < 0.1) {
+      sRange.forEach((s) => {
+        tRange.forEach((t) => {
+          if (Math.abs(calcSigma(t, s) - sig) < 0.15) {
             x.push(s);
             y.push(t);
           }
         });
       });
-      
-      if (x.length > 0) {
+
+      if (x.length > 1) {
         traces.push({
-          x, y,
+          x,
+          y,
           mode: 'lines',
           name: `σ=${sig}`,
-          line: { color: 'rgba(255,255,255,0.1)', dash: 'dot', width: 1 },
+          line: { color: 'rgba(255,255,255,0.15)', dash: 'dot', width: 1 },
           showlegend: false,
-          hoverinfo: 'skip'
+          hoverinfo: 'skip',
         });
       }
     });
 
     return traces;
-  }, [data]);
+  }, [cleanData]);
 
   const layout: Partial<Layout> = {
     title: {
-      text: title || 'T-S Diagram (Isopycnals)',
+      text: title || 'T-S Diagram (Temperature vs Salinity Isopycnals)',
       font: { color: '#E2E8F0', family: 'Inter, sans-serif' },
     },
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'rgba(15, 23, 42, 0.5)',
     xaxis: {
-      title: { 
+      title: {
         text: 'Salinity (PSU)',
-        font: { color: '#94A3B8' }
+        font: { color: '#94A3B8' },
       },
       gridcolor: 'rgba(255,255,255,0.05)',
       tickfont: { color: '#94A3B8' },
     },
     yaxis: {
-      title: { 
+      title: {
         text: 'Temperature (°C)',
-        font: { color: '#94A3B8' }
+        font: { color: '#94A3B8' },
       },
       gridcolor: 'rgba(255,255,255,0.05)',
       tickfont: { color: '#94A3B8' },
     },
-    margin: { l: 60, r: 20, t: 60, b: 60 },
+    margin: { l: 60, r: 20, t: 50, b: 50 },
     showlegend: true,
     legend: { font: { color: '#94A3B8' } },
     hovermode: 'closest',
     autosize: true,
   };
 
+  if (cleanData.length === 0) return null;
+
   return (
-    <div className="w-full h-full min-h-[400px] glass-card rounded-2xl overflow-hidden p-4">
+    <div className="w-full h-full min-h-[360px] glass-card rounded-2xl overflow-hidden p-3">
       <Plot
         data={plotData}
         layout={layout}

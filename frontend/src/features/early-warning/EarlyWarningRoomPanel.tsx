@@ -161,7 +161,11 @@ export function EarlyWarningRoomPanel() {
               </div>
               <div className="flex justify-between">
                 <span>Affected Area</span>
-                <span className="text-white font-bold">{activeAnomaly ? `${Math.round((activeAnomaly.lat_max - activeAnomaly.lat_min) * (activeAnomaly.lon_max - activeAnomaly.lon_min) * 111 * 111).toLocaleString()} km²` : "145,620 km²"}</span>
+                <span className="text-white font-bold" suppressHydrationWarning>
+                  {activeAnomaly
+                    ? `${new Intl.NumberFormat('en-US').format(Math.round((activeAnomaly.lat_max - activeAnomaly.lat_min) * (activeAnomaly.lon_max - activeAnomaly.lon_min) * 111 * 111))} km²`
+                    : "145,620 km²"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Affected Species</span>
