@@ -43,7 +43,7 @@ export function OceanOperationsPanel() {
   const [is3DMode, setIs3DMode] = useState(true);
 
   const activeAlertCount = anomalies.length > 0 ? String(anomalies.length).padStart(2, "0") : "07";
-  const floatCount = floats.length > 0 ? "3,842" : "3,842";
+  const floatCount = floats.length > 0 ? `${floats.length}` : "66";
   const latency = systemHealth.latencyMs ? `${systemHealth.latencyMs}ms` : "14ms";
 
   return (
@@ -65,13 +65,6 @@ export function OceanOperationsPanel() {
             <span className="text-[10px] text-[#809AAB]">Active ARGO Floats</span>
           </div>
 
-          {/* Active Alerts */}
-          <div className="flex items-center gap-1.5">
-            <AlertTriangle size={13} className="text-[#FF4B4B]" />
-            <span className="font-bold text-[#FF4B4B]">{activeAlertCount}</span>
-            <span className="text-[10px] text-[#809AAB]">Active Alerts</span>
-          </div>
-
           {/* PostGIS Latency */}
           <div className="flex items-center gap-1.5 hidden sm:flex">
             <Zap size={13} className="text-[#00FFC6]" />
@@ -91,70 +84,6 @@ export function OceanOperationsPanel() {
       {/* ── 2D MapLibre Operational Map Area ──────────────────────────────── */}
       <div className="relative flex-1 w-full h-full min-h-[380px] overflow-hidden">
         <VarunaMap onHoverCoords={setHoverCoords} is3DMode={is3DMode} />
-
-        {/* ── Floating Right Alert Cards Overlay ────────────────────────────── */}
-        <div className="absolute top-3 right-3 z-30 flex flex-col gap-2 max-w-[210px] pointer-events-auto">
-          {/* Critical MHW Alert Card */}
-          <div
-            onClick={() => {
-              setSelectedAlertId(101);
-              flyToCoordinates?.(16.5, 66.5, 3000000);
-            }}
-            className="p-2.5 rounded-lg bg-[#0B1D2C]/90 border border-[#FF4B4B]/40 shadow-[0_0_15px_rgba(255,75,75,0.15)] backdrop-blur-md cursor-pointer hover:border-[#FF4B4B] transition-all group"
-          >
-            <div className="flex items-center justify-between text-[10px] font-mono mb-1">
-              <span className="text-[#FF4B4B] font-bold uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF4B4B] animate-ping" />
-                Critical Alert
-              </span>
-              <ChevronDown size={12} className="text-zinc-400 group-hover:rotate-180 transition-transform" />
-            </div>
-            <div className="text-xs font-mono font-bold text-white">MARINE HEATWAVE</div>
-            <div className="text-[10px] font-mono text-[#809AAB]">Arabian Sea</div>
-            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-              <span className="text-xs font-mono font-bold text-[#FF4B4B]">+3.4°C Anomaly</span>
-              <span className="text-[9px] font-mono text-zinc-400">Severity: <b className="text-[#FF4B4B]">CRITICAL</b></span>
-            </div>
-          </div>
-
-          {/* Hypoxia Zone Card */}
-          <div
-            onClick={() => {
-              setSelectedAlertId(103);
-              flyToCoordinates?.(11.5, 75.0, 3000000);
-            }}
-            className="p-2.5 rounded-lg bg-[#0B1D2C]/90 border border-[#F59E0B]/40 shadow-[0_0_15px_rgba(245,158,11,0.15)] backdrop-blur-md cursor-pointer hover:border-[#F59E0B] transition-all"
-          >
-            <div className="text-[10px] font-mono font-bold text-[#F59E0B] uppercase tracking-wider">
-              Hypoxia Zone
-            </div>
-            <div className="text-xs font-mono font-bold text-white">Bay of Bengal</div>
-            <div className="text-[10px] font-mono text-zinc-300 mt-0.5">
-              DOXY &lt; 60 µmol/kg
-            </div>
-            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5 text-[9px] font-mono">
-              <span className="text-[#F59E0B] font-semibold">Severity: HIGH</span>
-              <ArrowRight size={10} className="text-[#F59E0B]" />
-            </div>
-          </div>
-
-          {/* Biodiversity Impact Card */}
-          <div
-            onClick={() => setActiveNav("BIODIVERSITY")}
-            className="p-2.5 rounded-lg bg-[#0B1D2C]/90 border border-[#2EE6C6]/30 shadow-[0_0_15px_rgba(46,230,198,0.1)] backdrop-blur-md cursor-pointer hover:border-[#2EE6C6] transition-all"
-          >
-            <div className="flex items-center justify-between text-[10px] font-mono">
-              <span className="text-[#00FFC6] font-bold uppercase">Biodiversity Impact</span>
-            </div>
-            <div className="text-xs font-mono font-bold text-white mt-0.5">
-              12 Species Affected
-            </div>
-            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5 text-[9px] font-mono text-[#2EE6C6]">
-              <span>View All</span>
-              <ArrowRight size={10} />
-            </div>
-          </div>
-        </div>
 
         {/* ── Bottom Left Live Coordinates HUD ──────────────────────────────── */}
         <div className="absolute bottom-3 left-3 z-30 px-2.5 py-1.5 rounded-md bg-[#020B14]/80 border border-white/10 text-[10px] font-mono text-zinc-300 backdrop-blur-md">
