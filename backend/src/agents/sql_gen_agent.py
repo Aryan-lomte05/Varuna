@@ -15,22 +15,34 @@ from src.utils.sql_extract import extract_sql, sanitize_sql
 log = logging.getLogger("varuna.agent.sql")
 
 SCHEMA_CONTEXT = """
-PostgreSQL 16 Schema for VARUNA:
-Table: public.marine_data (Partitioned by year)
+PostgreSQL 16 Schema for VARUNA (Indian Ocean Observations 2022 to 2026):
+
+1. Table: public.marine_data (Canonical ARGO physical/chemical observations - 3.96M rows)
 Columns:
   platform_number (INT): ARGO float WMO ID (e.g. 1902303, 2901742)
-  time (TIMESTAMPTZ): Profile surfacing time (UTC)
-  latitude (DOUBLE PRECISION): -90 to 90
-  longitude (DOUBLE PRECISION): -180 to 180
-  pres (NUMERIC): Sea water pressure (dbar / ~depth in meters, 0 to 2000)
-  temp (NUMERIC): In-situ sea water temperature (°C)
-  psal (NUMERIC): Practical salinity (PSU)
-  doxy (NUMERIC): Dissolved oxygen concentration (µmol/kg)
-  chla (NUMERIC): Chlorophyll-a concentration (mg/m³)
-  nitrate (NUMERIC): Nitrate nutrient concentration (µmol/kg)
-  ph_in_situ_total (NUMERIC): Total in-situ seawater pH
+  cycle_number (INT): Profiling cycle index
+  direction (CHAR): 'A' (ascending) or 'D' (descending)
+  time (TIMESTAMP WITHOUT TIME ZONE): Profile observation timestamp (UTC)
+  latitude (DOUBLE PRECISION): 0.0 to 30.0 N
+  longitude (DOUBLE PRECISION): 50.0 to 100.0 E
+  pres (DOUBLE PRECISION): Water pressure (dbar / ~depth in meters, 0 to 2000)
+  temp (DOUBLE PRECISION): In-situ sea water temperature (°C)
+  psal (DOUBLE PRECISION): Practical salinity (PSU)
+  doxy (DOUBLE PRECISION): Dissolved oxygen concentration (µmol/kg)
+  chla (DOUBLE PRECISION): Chlorophyll-a concentration (mg/m³)
+  nitrate (DOUBLE PRECISION): Nitrate nutrient concentration (µmol/kg)
+  ph_in_situ_total (DOUBLE PRECISION): Total in-situ seawater pH
+  geom (GEOGRAPHY POINT 4326): PostGIS spatial point
 
-Table: public.marine_biodiversity (Darwin Core)
+2. View: public.v_latest_positions (Instant fleet locations - 1 row per float)
+Columns:
+  platform_number (INT): Float WMO ID
+  time (TIMESTAMP): Latest observation timestamp (UTC)
+  latitude (DOUBLE PRECISION): Latest latitude
+  longitude (DOUBLE PRECISION): Latest longitude
+* ALWAYS query public.v_latest_positions for 'current float locations', 'where are the floats now', or 'latest positions'.
+
+3. Table: public.marine_biodiversity (CMLRE Darwin Core Taxonomy)
 Columns:
   id (INT): Primary key
   scientific_name (VARCHAR): e.g. 'Sardinella longiceps', 'Rastrelliger kanagurta'
@@ -45,7 +57,7 @@ Geographic Regions:
   Equatorial IO: latitude BETWEEN -5.0 AND 5.0 AND longitude BETWEEN 50.0 AND 100.0
 """
 
-SYSTEM_PROMPT = f"""You are the NL→SQL Sub-Agent for VARUNA (INCOIS Ocean Data).
+SYSTEM_PROMPT = f"""You are the NL→SQL Sub-Agent for VARUNA (INCOIS Ocean Data & CMLRE Living Resources).
 Your task is to generate clean, high-performance PostgreSQL queries based on the user's question.
 
 RULES:
@@ -53,7 +65,8 @@ RULES:
 2. ONLY generate SELECT queries. Never generate INSERT, UPDATE, DELETE, or DROP.
 3. Always specify a LIMIT (maximum 200).
 4. Use standard aggregations: AVG(temp), AVG(doxy), DATE_TRUNC('month', time).
-5. For temporal queries, use INTERVAL (e.g., time >= NOW() - INTERVAL '6 months').
+5. For recent/current queries, use INTERVAL (e.g. time >= NOW() - INTERVAL '30 days') or public.v_latest_positions.
+6. For spatial queries, use bounding boxes or PostGIS ST_DWithin / ST_Distance.
 
 {SCHEMA_CONTEXT}
 """
