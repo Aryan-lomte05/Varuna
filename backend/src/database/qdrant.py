@@ -206,7 +206,7 @@ def _get_client():
     """Retrieve synchronous/async Qdrant client."""
     try:
         from qdrant_client import QdrantClient  # type: ignore
-        return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None, timeout=5)
+        return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None, timeout=2, check_compatibility=False)
     except Exception as e:
         log.warning("Qdrant connection unavailable: %s", str(e))
         return None
@@ -253,6 +253,13 @@ async def init_qdrant():
         return
 
     from qdrant_client.http import models  # type: ignore
+
+    try:
+        # Fast health probe (0.5s)
+        client.get_collections()
+    except Exception:
+        log.info("Qdrant offline. Using in-process BM25 & semantic fallback.")
+        return
 
     collections = ["argo_knowledge", "argo_schema", "bio_knowledge"]
     for col in collections:

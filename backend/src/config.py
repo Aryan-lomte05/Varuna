@@ -69,7 +69,12 @@ class Settings(BaseSettings):
     data_raw_dir: str = Field("./data/raw", alias="DATA_RAW_DIR")
     data_parquet_dir: str = Field("./data/processed", alias="DATA_PARQUET_DIR")
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "populate_by_name": True}
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
 
 
 @lru_cache(maxsize=1)
