@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>VARUNA - Understand. Predict. Protect.</title>
+  
+  <!-- Google Fonts & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-dim": "#051422",
+            "surface": "#051422",
+            "background": "#051422",
+            "surface-container": "#12212e",
+            "surface-container-high": "#1d2b39",
+            "surface-container-low": "#0e1d2a",
+            "surface-container-lowest": "#020f1c",
+            "primary": "#83ffe3",
+            "primary-container": "#2ee6c6",
+            "tertiary": "#00ffc6",
+            "alert-critical": "#FF4D4D",
+            "alert-warning": "#FFA500",
+            "border-glow": "rgba(46, 230, 198, 0.3)",
+            "on-surface": "#d5e4f7",
+            "on-surface-variant": "#bacac4"
+          },
+          "fontFamily": {
+            "outfit": ["Outfit", "sans-serif"],
+            "jakarta": ["Plus Jakarta Sans", "sans-serif"],
+            "data-mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #051422;
+    }
+
+    .hud-scanline {
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(46,230,198,0.04) 50%, rgba(46,230,198,0.04));
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    /* Force full bleed on html/body/app wrapper */
+    html, body { margin: 0; padding: 0; overflow-x: hidden; }
+    .pt-16 { padding-top: 64px; }
+
+    .title-gradient {
+      background: linear-gradient(135deg, #ffffff 0%, #e8f4ff 35%, #83ffe3 65%, #2ee6c6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 1));
+    }
+
+    .title-glow {
+      text-shadow: 0 0 40px rgba(46, 230, 198, 0.7), 0 0 80px rgba(0, 255, 198, 0.35);
+    }
+
+    .btn-tactical-cta {
+      background: linear-gradient(135deg, rgba(46, 230, 198, 0.30) 0%, rgba(0, 255, 198, 0.18) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(46, 230, 198, 0.7);
+      box-shadow: 0 0 30px rgba(46, 230, 198, 0.5), inset 0 0 20px rgba(131, 255, 227, 0.25);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-tactical-cta:hover {
+      background: linear-gradient(135deg, rgba(46, 230, 198, 0.55) 0%, rgba(0, 255, 198, 0.40) 100%);
+      border-color: #83ffe3;
+      box-shadow: 0 0 55px rgba(46, 230, 198, 0.9), inset 0 0 30px rgba(255, 255, 255, 0.55);
+      transform: translateY(-3px) scale(1.03);
+    }
+
+    .hud-badge-glass {
+      background: rgba(5, 18, 36, 0.80);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(46, 230, 198, 0.45);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    }
+
+    .nav-tab-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      color: #c8ddf5;
+      transition: all 0.2s ease;
+      font-weight: 600;
+    }
+    .nav-tab-btn:hover {
+      color: #83ffe3;
+      background: rgba(46, 230, 198, 0.12);
+    }
+    .nav-tab-btn.active {
+      color: #83ffe3;
+      background: rgba(46, 230, 198, 0.2);
+      border-bottom: 2px solid #2ee6c6;
+      font-weight: 700;
+    }
+
+    .pulse-indicator {
+      animation: pulseAnim 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.25; transform: scale(1.35); }
+    }
+
+    /* Marine species images */
+    .species-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(46,230,198,0.25);
+      filter: brightness(0.92) saturate(1.2);
+      transition: filter 0.3s, transform 0.3s;
+    }
+    .species-img:hover {
+      filter: brightness(1.05) saturate(1.4);
+      transform: scale(1.02);
+    }
+
+    /* Globe legend */
+    .globe-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body class="bg-[#051422] text-[#d5e4f7] font-jakarta overflow-x-hidden min-h-screen selection:bg-[#2ee6c6] selection:text-[#020f1c]">
+
+  <!-- ==================== MASTER APP HEADER ==================== -->
+  <header class="fixed top-0 left-0 w-full z-50 h-16 bg-[#051422]/95 backdrop-blur-xl border-b border-white/10 px-6 flex items-center justify-between shadow-2xl">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('view-landing')">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-[#2ee6c6] to-[#00bfa5] flex items-center justify-center shadow-[0_0_15px_rgba(46,230,198,0.5)]">
+        <span class="material-symbols-outlined text-[#051422] font-bold text-xl">waves</span>
+      </div>
+      <div>
+        <h1 class="font-outfit text-xl font-black tracking-tight text-white leading-none">VARUNA</h1>
+        <p class="text-[10px] font-data-mono text-[#84948f] tracking-wider uppercase mt-0.5">INCOIS × CMLRE</p>
+      </div>
+    </div>
+
+    <!-- Clean Navigation Tab Bar -->
+    <nav class="hidden md:flex items-center gap-2 font-jakarta text-xs font-semibold">
+      <button data-view-target="view-landing" class="nav-tab-btn active">Landing Page</button>
+      <button data-view-target="view-command-center" class="nav-tab-btn">Command Center</button>
+      <button data-view-target="view-multi-agent" class="nav-tab-btn">Multi-Agent AI</button>
+      <button data-view-target="view-biodiversity" class="nav-tab-btn">Biodiversity</button>
+      <button data-view-target="view-datasets" class="nav-tab-btn">Datasets</button>
+
+      <!-- Dropdown for Additional Views -->
+      <div class="relative group">
+        <button class="px-3 py-1.5 rounded-lg border border-[#2ee6c6]/40 text-[#83ffe3] flex items-center gap-1 hover:bg-[#2ee6c6]/10 transition-all text-xs font-bold cursor-pointer">
+          <span>More Views</span>
+          <span class="material-symbols-outlined text-sm">expand_more</span>
+        </button>
+        <div class="absolute right-0 top-full mt-2 w-56 hud-badge-glass py-2 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none group-hover:pointer-events-auto z-50">
+          <a data-view-target="view-vertical-profile" class="block px-4 py-2.5 text-xs text-slate-200 hover:bg-[#2ee6c6]/20 hover:text-[#83ffe3] cursor-pointer">ARGO 1902303 Profile</a>
+          <a data-view-target="view-early-warning" class="block px-4 py-2.5 text-xs text-slate-200 hover:bg-[#2ee6c6]/20 hover:text-[#83ffe3] cursor-pointer">Early-Warning Room</a>
+          <a data-view-target="view-deep-dive" class="block px-4 py-2.5 text-xs text-slate-200 hover:bg-[#2ee6c6]/20 hover:text-[#83ffe3] cursor-pointer">Deep Dive Mode (1250m)</a>
+          <a data-view-target="view-mobile" class="block px-4 py-2.5 text-xs text-slate-200 hover:bg-[#2ee6c6]/20 hover:text-[#83ffe3] cursor-pointer">Mobile / Field Mode</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Right Status & CTAs -->
+    <div class="flex items-center gap-4">
+      <div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#12212e]/80 border border-[#2ee6c6]/30 text-xs font-data-mono text-[#2ee6c6]">
+        <span class="pulse-dot"></span>
+        <span>LIVE 14:32:08 UTC</span>
+      </div>
+
+      <button id="deploy-agent-btn" class="btn-tactical-cta text-[#83ffe3] font-jakarta text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-wider cursor-pointer">
+        Deploy Agent
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN VIEW CONTAINER ==================== -->
+  <div class="pt-16 min-h-screen">
+
+    <!-- VIEW 1: DRAMATIC OCEAN LANDING PAGE -->
+    <!-- FULL BLEED: position fixed to cover entire viewport behind header -->
+    <section id="view-landing" class="varuna-view-section block" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;overflow:hidden;">
+
+      <!-- Dynamic WebGL Ocean Surface Shader Canvas (fills 100% viewport) -->
+      <div style="position:absolute;inset:0;width:100%;height:100%;z-index:0;">
+        <canvas id="shader-canvas-OCEAN" style="width:100%;height:100%;display:block;"></canvas>
+      </div>
+
+      <!-- Three.js 3D Research Vessel Scene -->
+      <div style="position:absolute;inset:0;width:100%;height:100%;z-index:10;pointer-events:none;">
+        <div id="threejs-container-SHIP" style="width:100%;height:100%;pointer-events:auto;"></div>
+      </div>
+
+      <!-- HUD Scanline overlay -->
+      <div style="position:absolute;inset:0;z-index:15;pointer-events:none;" class="hud-scanline"></div>
+
+      <!-- Dark gradient vignette from top (behind header) -->
+      <div style="position:absolute;top:0;left:0;right:0;height:120px;z-index:16;pointer-events:none;background:linear-gradient(to bottom,rgba(5,20,34,0.92) 0%,rgba(5,20,34,0) 100%);"></div>
+
+      <!-- Main Landing Hero Text Overlay -->
+      <main style="position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;padding:0 64px;text-align:right;padding-top:64px;">
+        <div style="max-width:680px;width:100%;display:flex;flex-direction:column;align-items:flex-end;">
+
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full hud-badge-glass text-xs font-data-mono mb-5" style="border:1px solid rgba(46,230,198,0.5);color:#83ffe3;">
+            <span class="w-2 h-2 rounded-full pulse-indicator" style="background:#00ffc6;box-shadow:0 0 8px #00ffc6;"></span>
+            <span style="text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">National Marine Intelligence Backbone</span>
+          </div>
+
+          <h1 class="font-outfit title-gradient" style="font-size:clamp(2.5rem,5.5vw,4.5rem);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:1.05;margin-bottom:1.25rem;">
+            Understand.<br/>Predict. Protect.
+          </h1>
+
+          <p class="font-jakarta" style="font-size:1.1rem;color:#e2f0ff;font-weight:400;line-height:1.7;margin-bottom:2.25rem;max-width:560px;text-shadow:0 2px 12px rgba(0,0,0,0.9);">
+            India&rsquo;s Ocean. Powered by <strong style="color:#83ffe3;">Agentic AI</strong>. Bridging INCOIS physical oceanography &amp; CMLRE marine biodiversity in real-time.
+          </p>
+
+          <button onclick="switchView('view-command-center')" class="btn-tactical-cta font-jakarta group" style="color:#ffffff;font-size:1rem;font-weight:700;padding:1rem 2.25rem;border-radius:14px;text-transform:uppercase;letter-spacing:0.12em;display:inline-flex;align-items:center;gap:12px;cursor:pointer;">
+            <span class="material-symbols-outlined group-hover:rotate-45" style="font-size:22px;color:#83ffe3;transition:transform 0.3s;">rocket_launch</span>
+            <span>Launch Command Center</span>
+          </button>
+
+          <!-- Floating mini-stats -->
+          <div style="display:flex;gap:16px;margin-top:2.5rem;">
+            <div class="hud-badge-glass" style="padding:10px 18px;border-radius:10px;border-left:3px solid #2ee6c6;">
+              <div class="font-data-mono" style="font-size:1.4rem;font-weight:800;color:#83ffe3;line-height:1;">3,842</div>
+              <div class="font-data-mono" style="font-size:10px;color:#a0b8c8;text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Active ARGO Floats</div>
+            </div>
+            <div class="hud-badge-glass" style="padding:10px 18px;border-radius:10px;border-left:3px solid #ffa500;">
+              <div class="font-data-mono" style="font-size:1.4rem;font-weight:800;color:#ffa500;line-height:1;">07</div>
+              <div class="font-data-mono" style="font-size:10px;color:#a0b8c8;text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Active Alerts</div>
+            </div>
+            <div class="hud-badge-glass" style="padding:10px 18px;border-radius:10px;border-left:3px solid #00ffc6;">
+              <div class="font-data-mono" style="font-size:1.4rem;font-weight:800;color:#00ffc6;line-height:1;">99.8%</div>
+              <div class="font-data-mono" style="font-size:10px;color:#a0b8c8;text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Model Accuracy</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </section>
+    <!-- Spacer so the page scrolls down past the fixed landing -->
+    <div id="landing-spacer" style="height:100vh;display:none;"></div>
+
+    <!-- VIEW 2: COMMAND CENTER 3D GLOBE TACTICAL HUD -->
+    <section id="view-command-center" class="varuna-view-section hidden" style="position:relative;width:100%;height:calc(100vh - 64px);overflow:hidden;">
+      <!-- Globe Canvas -->
+      <div id="globe-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;background:radial-gradient(ellipse at center,#0a1e38 0%,#040c18 70%);"></div>
+
+      <!-- Hover Tooltip -->
+      <div id="hover-tooltip" class="glass-panel" style="position:absolute;z-index:100;pointer-events:none;display:none;width:290px;padding:16px;">
+        <div class="tooltip-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="pulse-dot"></span>
+            <span class="font-data-mono" style="font-size:13px;font-weight:700;color:#2ee6c6;" id="tt-id">ARGO-1902303</span>
+          </div>
+          <span class="font-data-mono" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.1);" id="tt-status">NORMAL</span>
+        </div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Region:</span><span style="color:#ffffff;font-weight:600;" id="tt-region">Arabian Sea</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Coordinates:</span><span style="color:#e0f0ff;" id="tt-latlon">18.62°N, 72.36°E</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Surface Temp:</span><span style="color:#2ee6c6;font-weight:700;" id="tt-temp">28.4°C (+3.4°C)</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Salinity:</span><span style="color:#e0f0ff;" id="tt-salinity">35.2 PSU</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Dissolved O₂:</span><span style="color:#ffa500;font-weight:700;" id="tt-doxy">48.2 µmol/kg</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Chl-a:</span><span style="color:#4ade80;" id="tt-chla">0.42 mg/m³</span></div>
+        <div class="tooltip-row"><span style="color:#8ab0c0;">Species Impact:</span><span style="color:#00ffc6;font-size:11px;" id="tt-species">Sardinella longiceps</span></div>
+      </div>
+
+      <!-- HUD Top Left Card -->
+      <div class="glass-panel" style="position:absolute;top:24px;left:24px;z-index:20;width:360px;padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:12px;">
+          <h3 style="font-weight:700;font-size:15px;color:#ffffff;display:flex;align-items:center;gap:8px;">
+            <span class="material-symbols-outlined" style="color:#2ee6c6;font-size:20px;">radar</span>
+            Indian Ocean Live Operations
+          </h3>
+          <span class="font-data-mono" style="font-size:10px;color:#8ab0c0;background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:4px;">INCOIS</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="background:rgba(18,33,46,0.7);padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+            <div class="font-outfit" style="font-size:26px;font-weight:800;color:#83ffe3;line-height:1;">3,842</div>
+            <div class="font-data-mono" style="font-size:10px;color:#8ab0c0;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Active ARGO Floats</div>
+          </div>
+          <div style="background:rgba(18,33,46,0.7);padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+            <div class="font-outfit" style="font-size:26px;font-weight:800;color:#ffa500;line-height:1;">07</div>
+            <div class="font-data-mono" style="font-size:10px;color:#8ab0c0;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Active Alerts</div>
+          </div>
+          <div style="background:rgba(18,33,46,0.7);padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+            <div class="font-outfit" style="font-size:26px;font-weight:800;color:#4ade80;line-height:1;">14ms</div>
+            <div class="font-data-mono" style="font-size:10px;color:#8ab0c0;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">PostGIS Latency</div>
+          </div>
+          <div style="background:rgba(18,33,46,0.7);padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+            <div class="font-outfit" style="font-size:26px;font-weight:800;color:#2ee6c6;line-height:1;">99.8%</div>
+            <div class="font-data-mono" style="font-size:10px;color:#8ab0c0;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Model Accuracy</div>
+          </div>
+        </div>
+        <!-- Float Color Legend -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:10px;font-weight:700;color:#8ab0c0;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;" class="font-data-mono">Float Marker Legend</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <span class="font-data-mono" style="font-size:10px;color:#2ee6c6;"><span class="globe-legend-dot" style="background:#2ee6c6;"></span>Arabian Sea</span>
+            <span class="font-data-mono" style="font-size:10px;color:#a78bfa;"><span class="globe-legend-dot" style="background:#a78bfa;"></span>Bay of Bengal</span>
+            <span class="font-data-mono" style="font-size:10px;color:#4ade80;"><span class="globe-legend-dot" style="background:#4ade80;"></span>Equatorial IO</span>
+            <span class="font-data-mono" style="font-size:10px;color:#fb923c;"><span class="globe-legend-dot" style="background:#fb923c;"></span>Lakshadweep</span>
+            <span class="font-data-mono" style="font-size:10px;color:#38bdf8;"><span class="globe-legend-dot" style="background:#38bdf8;"></span>Andaman Sea</span>
+            <span class="font-data-mono" style="font-size:10px;color:#ff4d4d;"><span class="globe-legend-dot" style="background:#ff4d4d;"></span>CRITICAL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD Top Right Alert Cards -->
+      <div style="position:absolute;top:24px;right:24px;z-index:20;width:300px;display:flex;flex-direction:column;gap:12px;">
+        <div class="glass-panel critical-card" style="padding:16px;">
+          <div class="font-data-mono" style="font-size:11px;font-weight:700;color:#ff4d4d;border-bottom:1px solid rgba(255,77,77,0.3);padding-bottom:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">warning</span> Critical Alert</span>
+            <span style="background:rgba(255,77,77,0.2);padding:2px 8px;border-radius:4px;">CRITICAL</span>
+          </div>
+          <h4 style="font-weight:700;color:#ffffff;font-size:15px;margin-bottom:4px;">MARINE HEATWAVE</h4>
+          <p class="font-data-mono" style="font-size:11px;color:#8ab0c0;">Arabian Sea • Sector 4B</p>
+          <div class="font-data-mono" style="font-size:22px;font-weight:800;color:#ff4d4d;margin-top:8px;">+3.4°C Anomaly</div>
+        </div>
+        <div class="glass-panel warning-card" style="padding:16px;">
+          <div class="font-data-mono" style="font-size:11px;font-weight:700;color:#ffa500;border-bottom:1px solid rgba(255,165,0,0.3);padding-bottom:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">water_drop</span> Hypoxia Zone</span>
+            <span style="background:rgba(255,165,0,0.2);padding:2px 8px;border-radius:4px;">HIGH</span>
+          </div>
+          <h4 style="font-weight:700;color:#ffffff;font-size:15px;margin-bottom:4px;">Bay of Bengal</h4>
+          <p class="font-data-mono" style="font-size:11px;color:#8ab0c0;">DOXY &lt; 60 µmol/kg — Hypoxic Stress Zone</p>
+        </div>
+      </div>
+
+      <!-- Globe Zoom Controls -->
+      <div style="position:absolute;bottom:90px;left:24px;z-index:20;display:flex;gap:8px;background:rgba(7,26,45,0.7);backdrop-filter:blur(12px);padding:6px;border-radius:8px;border:1px solid rgba(46,230,198,0.3);">
+        <button id="btn-zoom-in" class="ctrl-btn" title="Zoom In"><span class="material-symbols-outlined" style="font-size:18px;">add</span></button>
+        <button id="btn-reset-view" class="ctrl-btn" title="Reset"><span class="material-symbols-outlined" style="font-size:18px;">my_location</span></button>
+        <button id="btn-zoom-out" class="ctrl-btn" title="Zoom Out"><span class="material-symbols-outlined" style="font-size:18px;">remove</span></button>
+      </div>
+
+      <!-- Bottom Stream Bar -->
+      <div class="glass-panel font-data-mono" style="position:absolute;bottom:24px;left:24px;right:24px;z-index:20;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+        <div style="display:flex;align-items:center;gap:24px;">
+          <span style="display:flex;align-items:center;gap:8px;color:#2ee6c6;font-weight:700;"><span class="pulse-dot"></span>Live Data Streams Active</span>
+          <span style="color:#c0d8f0;">ARGO Floats • Satellites • Mooring Sensors</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:24px;color:#8ab0c0;">
+          <div>Lat: <span style="color:#ffffff;font-weight:700;" id="hud-live-lat">18.62°N</span></div>
+          <div>Lon: <span style="color:#ffffff;font-weight:700;" id="hud-live-lon">72.36°E</span></div>
+          <div>Zoom: <span style="color:#2ee6c6;font-weight:700;" id="hud-zoom-level">50%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MULTI-AGENT TASK DAG EXECUTION MODULE -->
+    <section id="view-multi-agent" class="varuna-view-section hidden section-container">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <span class="text-xs font-data-mono text-[#2ee6c6] font-bold uppercase tracking-widest">NVIDIA Nemotron-550B Architecture</span>
+          <h2 class="text-3xl font-outfit font-extrabold text-white mt-1">Multi-Agent Task DAG Execution</h2>
+        </div>
+        <div class="glass-panel px-4 py-2 text-xs font-data-mono text-[#00ffc6]">
+          Plan ID: plan_9f82bfc4 • Total Time: 1.42s
+        </div>
+      </div>
+
+      <div class="glass-panel p-6 mb-8">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input type="text" id="agent-query-input" class="search-input text-sm py-3 flex-1" value="Decompose query: Show marine heatwave anomalies in Arabian Sea and correlated Sardinella habitats." />
+          <button id="run-agent-dag-btn" class="btn-primary py-3 px-6">
+            <span class="material-symbols-outlined text-sm">play_arrow</span> Run Multi-Agent DAG
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div id="dag-step-planner" class="glass-panel p-5 border-l-4 border-l-[#2ee6c6]">
+          <div class="text-xs font-data-mono text-[#2ee6c6] font-bold mb-1">PLANNER AGENT</div>
+          <p class="text-xs text-slate-300">Decomposing natural language query into DAG.</p>
+        </div>
+        <div id="dag-step-sql" class="glass-panel p-5 border-l-4 border-l-emerald-400">
+          <div class="text-xs font-data-mono text-emerald-400 font-bold mb-1">SQL AGENT (420ms)</div>
+          <p class="text-xs text-slate-300">PostGIS query across float profiles.</p>
+        </div>
+        <div id="dag-step-bio" class="glass-panel p-5 border-l-4 border-l-purple-400">
+          <div class="text-xs font-data-mono text-purple-400 font-bold mb-1">BIODIVERSITY (180ms)</div>
+          <p class="text-xs text-slate-300">CMLRE Darwin Core entity match.</p>
+        </div>
+        <div id="dag-step-vector" class="glass-panel p-5 border-l-4 border-l-cyan-400">
+          <div class="text-xs font-data-mono text-cyan-400 font-bold mb-1">RETRIEVAL (210ms)</div>
+          <p class="text-xs text-slate-300">Qdrant hybrid RAG lookup.</p>
+        </div>
+        <div id="dag-step-synthesizer" class="glass-panel p-5 border-l-4 border-l-[#00ffc6]">
+          <div class="text-xs font-data-mono text-[#00ffc6] font-bold mb-1">SYNTHESIZER (540ms)</div>
+          <p class="text-xs text-slate-300">Zero-hallucination grounded output.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: CMLRE CROSS-DOMAIN BIODIVERSITY EXPLORER -->
+    <section id="view-biodiversity" class="varuna-view-section hidden section-container">
+      <div class="mb-8">
+        <span class="font-data-mono" style="font-size:11px;color:#00ffc6;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;">INCOIS ↔ CMLRE Integration</span>
+        <h2 class="font-outfit" style="font-size:2rem;font-weight:800;color:#ffffff;margin-top:6px;">Cross-Domain Biodiversity Explorer</h2>
+        <p style="color:#a0c4d8;margin-top:8px;font-size:14px;">Real-time AI-driven correlations between physical oceanography data and CMLRE marine species habitat suitability.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:32px;">
+
+        <!-- Species Card 1: Sardinella -->
+        <div class="glass-panel" style="padding:24px;">
+          <span class="font-data-mono" style="font-size:10px;font-weight:700;background:rgba(46,230,198,0.2);color:#2ee6c6;padding:4px 10px;border-radius:4px;text-transform:uppercase;">PELAGIC SPECIES</span>
+          <img src="sardine_marine.png" alt="Sardinella longiceps - Indian Oil Sardine" class="species-img" style="margin-top:12px;" onerror="this.style.display='none'">
+          <h3 class="font-outfit" style="font-size:1.4rem;font-weight:700;color:#ffffff;font-style:italic;">Sardinella longiceps</h3>
+          <p style="font-size:12px;color:#8ab0c0;margin-top:2px;">Indian Oil Sardine</p>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);">
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Taxonomy:</span><span style="color:#e0f0ff;">Actinopterygii / Clupeidae</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Optimal SST:</span><span style="color:#4ade80;font-weight:600;">22°C – 26°C</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;"><span style="color:#8ab0c0;">Observed:</span><span style="color:#f87171;font-weight:700;">29.2°C (+3.2°C) ⚠</span></div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;font-size:11px;color:#fca5a5;" class="font-data-mono">
+            AI: Thermal stress → Habitat compression → Offshore migration risk HIGH
+          </div>
+        </div>
+
+        <!-- Species Card 2: Yellowfin Tuna -->
+        <div class="glass-panel" style="padding:24px;">
+          <span class="font-data-mono" style="font-size:10px;font-weight:700;background:rgba(251,146,60,0.2);color:#fb923c;padding:4px 10px;border-radius:4px;text-transform:uppercase;">LARGE PELAGIC</span>
+          <img src="tuna_marine.png" alt="Thunnus albacares - Yellowfin Tuna" class="species-img" style="margin-top:12px;" onerror="this.style.display='none'">
+          <h3 class="font-outfit" style="font-size:1.4rem;font-weight:700;color:#ffffff;font-style:italic;">Thunnus albacares</h3>
+          <p style="font-size:12px;color:#8ab0c0;margin-top:2px;">Yellowfin Tuna</p>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);">
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Taxonomy:</span><span style="color:#e0f0ff;">Actinopterygii / Scombridae</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Optimal SST:</span><span style="color:#4ade80;font-weight:600;">24°C – 30°C</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;"><span style="color:#8ab0c0;">Observed:</span><span style="color:#2ee6c6;font-weight:700;">28.1°C (Suitable)</span></div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:6px;font-size:11px;color:#86efac;" class="font-data-mono">
+            AI: Optimal thermal window — aggregation probability HIGH in Arabian Sea thermocline
+          </div>
+        </div>
+
+        <!-- Species Card 3: Grouper -->
+        <div class="glass-panel" style="padding:24px;">
+          <span class="font-data-mono" style="font-size:10px;font-weight:700;background:rgba(167,139,250,0.2);color:#a78bfa;padding:4px 10px;border-radius:4px;text-transform:uppercase;">DEMERSAL SPECIES</span>
+          <img src="grouper_marine.png" alt="Epinephelus tauvina - Greasy Grouper" class="species-img" style="margin-top:12px;" onerror="this.style.display='none'">
+          <h3 class="font-outfit" style="font-size:1.4rem;font-weight:700;color:#ffffff;font-style:italic;">Epinephelus tauvina</h3>
+          <p style="font-size:12px;color:#8ab0c0;margin-top:2px;">Greasy Grouper</p>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);">
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Taxonomy:</span><span style="color:#e0f0ff;">Actinopterygii / Serranidae</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#8ab0c0;">Optimal SST:</span><span style="color:#4ade80;font-weight:600;">20°C – 28°C</span></div>
+            <div class="font-data-mono" style="font-size:12px;display:flex;justify-content:space-between;"><span style="color:#8ab0c0;">Observed:</span><span style="color:#fb923c;font-weight:700;">29.4°C (+1.4°C) !</span></div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(251,146,60,0.09);border:1px solid rgba(251,146,60,0.3);border-radius:6px;font-size:11px;color:#fed7aa;" class="font-data-mono">
+            AI: Marginal thermal stress — DOXY depletion risk in DOXY &lt; 60 zones
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Environmental envelope chart -->
+      <div class="glass-panel" style="padding:24px;">
+        <h4 style="font-weight:700;color:#ffffff;font-size:15px;margin-bottom:16px;">SST ENVIRONMENTAL ENVELOPE vs OBSERVED (Jan–Aug 2026)</h4>
+        <canvas id="bio-sst-canvas" style="width:100%;height:200px;border-radius:8px;background:rgba(7,26,45,0.5);border:1px solid rgba(255,255,255,0.07);"></canvas>
+        <p class="font-data-mono" style="font-size:11px;color:#f87171;margin-top:12px;font-weight:600;">⚠ AI Diagnosis: 3 out of 6 key species are experiencing thermal stress above optimal SST bands — habitat compression and northward range shift predicted for Q3 2026.</p>
+      </div>
+    </section>
+
+    <!-- VIEW 5: ARGO VERTICAL PROFILE DEEP-DIVE -->
+    <section id="view-vertical-profile" class="varuna-view-section hidden section-container">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-outfit font-extrabold text-white">ARGO 1902303 - Vertical Profile</h2>
+      </div>
+
+      <div class="glass-panel p-6 mb-6">
+        <canvas id="depth-profile-canvas" class="w-full h-80 rounded bg-[#071a2d]/60 border border-white/5"></canvas>
+      </div>
+    </section>
+
+    <!-- VIEW 6: PROACTIVE EARLY-WARNING ROOM -->
+    <section id="view-early-warning" class="varuna-view-section hidden section-container">
+      <h2 class="text-3xl font-outfit font-extrabold text-white mb-6">Proactive Early-Warning Room</h2>
+      <div class="glass-panel p-6 mb-8">
+        <h4 class="font-bold text-white text-base mb-4">SST ANOMALY TIMELINE (Arabian Sea Sector 4B)</h4>
+        <canvas id="ew-timeline-canvas" class="w-full h-36 rounded bg-[#071a2d]/60 border border-white/5"></canvas>
+      </div>
+    </section>
+
+    <!-- VIEW 7: DEEP DIVE MODE - UNDERWATER SUBMERSIBLE HYDROSTATICS -->
+    <section id="view-deep-dive" class="varuna-view-section hidden relative w-full h-[calc(100vh-64px)] overflow-hidden">
+      <div id="underwater-canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
+      <div class="absolute inset-0 z-10 bg-[#020f1c]/30 hud-scanline mix-blend-overlay"></div>
+
+      <div class="absolute top-6 left-6 z-20 glass-panel p-6 w-96">
+        <div class="text-xs font-data-mono text-[#2ee6c6] font-bold mb-1">DEEP DIVE MODE • ARGO 1902303</div>
+        <h3 class="font-outfit text-2xl font-bold text-white">Sub-Surface Hydrostatics</h3>
+
+        <div class="mt-4 space-y-3 font-data-mono text-xs">
+          <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-slate-400">Current Depth:</span><span class="text-[#83ffe3] font-bold text-sm" id="dd-depth-val">1250 m</span></div>
+          <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-slate-400">Hydrostatic Pressure:</span><span class="text-white font-bold" id="dd-pressure-val">125.2 dbar</span></div>
+          <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-slate-400">Water Temperature:</span><span class="text-[#2ee6c6] font-bold" id="dd-temp-val">12.4 °C</span></div>
+          <div class="flex justify-between border-b border-white/10 pb-2"><span class="text-slate-400">Dissolved Oxygen:</span><span class="text-[#ffa500] font-bold" id="dd-doxy-val">72.1 µmol/kg</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Salinity:</span><span class="text-white font-bold" id="dd-salinity-val">34.9 PSU</span></div>
+        </div>
+
+        <div class="mt-6">
+          <label class="block text-[11px] font-data-mono text-slate-300 mb-2">Descent Depth Slider (0m to 2000m):</label>
+          <input type="range" id="deep-dive-depth-slider" min="0" max="2000" value="1250" class="w-full accent-[#2ee6c6]" />
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 8: DATASETS & EXPORTS MODULE -->
+    <section id="view-datasets" class="varuna-view-section hidden section-container">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-outfit font-extrabold text-white">Datasets & NetCDF Exports</h2>
+        <button onclick="exportArgoDataCSV()" class="btn-primary px-5 py-2.5">
+          <span class="material-symbols-outlined text-sm">download</span> Export Dataset CSV
+        </button>
+      </div>
+
+      <div class="glass-panel p-6 overflow-x-auto">
+        <table class="tactical-table">
+          <thead>
+            <tr><th>FLOAT ID</th><th>REGION</th><th>COORDINATES</th><th>SURFACE TEMP</th><th>SALINITY</th><th>DOXY OXYGEN</th><th>STATUS</th><th>ACTION</th></tr>
+          </thead>
+          <tbody id="datasets-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW 9: MOBILE MODE -->
+    <section id="view-mobile" class="varuna-view-section hidden section-container flex justify-center items-center">
+      <div class="w-80 h-[580px] bg-[#051422] rounded-[36px] border-4 border-slate-700 shadow-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+        <div class="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-2"></div>
+        <div class="flex justify-between items-center text-xs font-outfit font-bold text-[#83ffe3] border-b border-white/10 pb-2">
+          <span>VARUNA Mobile</span><span class="text-[10px] font-data-mono text-emerald-400">FIELD MODE</span>
+        </div>
+        <div class="glass-panel p-3 text-left my-auto">
+          <div class="text-[10px] font-data-mono text-[#ff4d4d] font-bold">MHW ANOMALY</div>
+          <div class="text-lg font-extrabold text-white font-outfit">+3.4°C Arabian Sea</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Float Telemetry Detail Modal -->
+  <div id="float-modal-backdrop" class="modal-backdrop">
+    <div class="modal-container glass-panel">
+      <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+        <h2 class="text-2xl font-extrabold text-white font-outfit" id="modal-float-id">ARGO-1902303</h2>
+        <button id="modal-close-btn" class="ctrl-btn"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="glass-panel p-5 mb-6">
+        <canvas id="depth-profile-canvas" class="w-full h-80 rounded bg-[#071a2d]/60"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- WebGL Ocean Surface Shader — Full Viewport, Dramatic Fast Waves -->
+  <script>
+  (function() {
+    const canvas = document.getElementById('shader-canvas-OCEAN');
+    if (!canvas) return;
+
+    function syncSize() {
+      // Force full viewport coverage
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+    syncSize();
+    window.addEventListener('resize', syncSize);
+
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return;
+
+    const vs = `
+      attribute vec2 a_position;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = a_position * 0.5 + 0.5;
+        gl_Position = vec4(a_position, 0.0, 1.0);
+      }
+    `;
+
+    // DRAMATIC: faster time multiplier, stronger wave distortion, brighter crests
+    const fs = `
+      precision highp float;
+      uniform float u_time;
+      uniform vec2 u_resolution;
+      varying vec2 v_uv;
+
+      float hash(vec2 p) {
+        p = fract(p * vec2(127.1, 311.7));
+        p += dot(p, p + 19.19);
+        return fract(p.x * p.y);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        float a = hash(i);
+        float b = hash(i + vec2(1.0, 0.0));
+        float c = hash(i + vec2(0.0, 1.0));
+        float d = hash(i + vec2(1.0, 1.0));
+        vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+      }
+
+      float fbm(vec2 p) {
+        float val = 0.0;
+        float amp = 0.5;
+        float freq = 1.0;
+        for (int i = 0; i < 7; i++) {
+          val += amp * noise(p * freq);
+          freq *= 2.1;
+          amp *= 0.48;
+          p = vec2(p.x * 0.866 - p.y * 0.5, p.x * 0.5 + p.y * 0.866);
+        }
+        return val;
+      }
+
+      void main() {
+        vec2 uv = v_uv;
+        float aspect = u_resolution.x / max(1.0, u_resolution.y);
+
+        // DRAMATIC: time runs much faster (1.6x speed)
+        float t = u_time * 1.6;
+
+        // Multiple wave layers with strong distortion
+        vec2 wv1 = vec2(uv.x * aspect * 2.8 + t * 0.55, uv.y * 3.5 - t * 0.40);
+        vec2 wv2 = vec2(uv.x * aspect * 1.4 - t * 0.30, uv.y * 2.0 + t * 0.60);
+        vec2 wv3 = vec2(uv.x * aspect * 4.5 + sin(t * 1.2) * 0.8, uv.y * 5.5 + t * 0.25);
+
+        // Heavy wave distortion
+        vec2 distort = vec2(
+          sin(uv.y * 6.0 + t * 2.5) * 0.12 + cos(uv.x * aspect * 4.0 + t * 1.8) * 0.08,
+          cos(uv.x * aspect * 5.0 + t * 2.0) * 0.10 + sin(uv.y * 8.0 + t * 1.5) * 0.06
+        );
+
+        vec2 warpedUV = uv + distort;
+
+        float wave1 = fbm(wv1 + distort * 1.5);
+        float wave2 = fbm(wv2 - distort * 1.0);
+        float wave3 = fbm(wv3 + distort * 2.0);
+
+        float wave = wave1 * 0.5 + wave2 * 0.30 + wave3 * 0.20;
+
+        // Wave crests — sharp and bright
+        float crest = pow(max(0.0, wave - 0.4) / 0.6, 3.0);
+        float turbulence = pow(max(0.0, wave1 * wave2 - 0.35), 2.0);
+
+        // DEEP COLOR PALETTE — rich ocean depth
+        vec3 abyss   = vec3(0.008, 0.028, 0.055);  // near black-navy
+        vec3 deep    = vec3(0.018, 0.068, 0.135);   // deep navy
+        vec3 mid     = vec3(0.030, 0.140, 0.240);   // ocean blue
+        vec3 surface = vec3(0.045, 0.200, 0.310);   // lighter blue
+        vec3 cyanGlow = vec3(0.15,  0.88,  0.75);   // electric cyan
+        vec3 mintFoam = vec3(0.00,  1.00,  0.78);   // mint white
+        vec3 whiteBreak = vec3(0.85, 0.98, 1.00);   // whitecap
+
+        // Base depth gradient
+        float depth = uv.y;
+        vec3 color = mix(abyss, deep, depth * 0.7);
+        color = mix(color, mid, wave * 0.7);
+        color = mix(color, surface, wave1 * wave2 * 0.6);
+
+        // Dramatic cyan shimmer on wave movement
+        float shimmer = pow(noise(wv3 * 3.0 + t * 0.9), 18.0);
+        color += shimmer * cyanGlow * 0.55;
+
+        // Turbulent foam near crests
+        color = mix(color, mintFoam, turbulence * 0.45);
+
+        // Bright whitecap breaking waves
+        color = mix(color, whiteBreak, crest * 0.35);
+
+        // Horizon glow at top (sky reflection)
+        float horizonGlow = pow(1.0 - uv.y, 3.5) * 0.18;
+        color += horizonGlow * vec3(0.1, 0.5, 0.7);
+
+        // Depth darkening at bottom
+        color = mix(color, abyss, pow(uv.y, 2.2) * 0.5);
+
+        // Subtle vignette
+        float vign = length((uv - 0.5) * vec2(0.7, 1.0));
+        color *= 1.0 - vign * 0.35;
+
+        // Slight brightness boost for drama
+        color *= 1.15;
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `;
+
+    function cs(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(s));
+      return s;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+    const posLoc = gl.getAttribLocation(prog, 'a_position');
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes  = gl.getUniformLocation(prog, 'u_resolution');
+
+    function render(t) {
+      syncSize();
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      if (uTime) gl.uniform1f(uTime, t * 0.001);
+      if (uRes)  gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      requestAnimationFrame(render);
+    }
+    render(0);
+  })();
+  </script>
+
+  <!-- Three.js 3D Research Vessel Scene -->
+  <script>
+  (function() {
+    const container = document.getElementById('threejs-container-SHIP');
+    if (!container) return;
+
+    function initShip() {
+      const width = Math.max(1, container.clientWidth || window.innerWidth);
+      const height = Math.max(1, container.clientHeight || window.innerHeight);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, Math.max(0.1, width / height), 0.1, 1000);
+      camera.position.set(0, 0.25, 4.2);
+
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
+
+      const cyanSpot = new THREE.SpotLight(0x2EE6C6, 2.5);
+      cyanSpot.position.set(3, 8, 5);
+      scene.add(cyanSpot);
+
+      const shipGroup = new THREE.Group();
+      scene.add(shipGroup);
+
+      // Load Texture
+      const textureLoader = new THREE.TextureLoader();
+      textureLoader.load('hd_research_vessel.png', (texture) => {
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        const aspect = texture.image.width / texture.image.height;
+        const planeWidth = 5.2;
+        const planeHeight = planeWidth / aspect;
+
+        const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, 32, 32);
+        const material = new THREE.MeshPhongMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.95,
+          shininess: 45,
+          specular: 0x2ee6c6,
+          side: THREE.DoubleSide
+        });
+
+        const shipMesh = new THREE.Mesh(geometry, material);
+        shipGroup.add(shipMesh);
+      });
+
+      let time = 0;
+      function animate() {
+        requestAnimationFrame(animate);
+        time += 0.018;
+
+        shipGroup.position.y = Math.sin(time * 0.8) * 0.12 + Math.cos(time * 1.3) * 0.05;
+        shipGroup.rotation.x = Math.sin(time * 0.6) * 0.035;
+        shipGroup.rotation.z = Math.cos(time * 0.7) * 0.025;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        const w = Math.max(1, container.clientWidth || window.innerWidth);
+        const h = Math.max(1, container.clientHeight || window.innerHeight);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+    }
+
+    initShip();
+  })();
+  </script>
+
+  <!-- Navigation Switcher Script -->
+  <script>
+    window.switchView = function(targetId) {
+      const tabs = document.querySelectorAll('[data-view-target]');
+      const views = document.querySelectorAll('.varuna-view-section');
+
+      tabs.forEach(t => {
+        t.classList.remove('active', 'text-[#83ffe3]');
+        if (t.dataset.viewTarget === targetId) {
+          t.classList.add('active', 'text-[#83ffe3]');
+        }
+      });
+
+      views.forEach(v => {
+        if (v.id === targetId) {
+          v.classList.remove('hidden');
+          v.classList.add('block');
+          // For landing page: show as fixed; others as normal flow
+          if (targetId === 'view-landing') {
+            v.style.position = 'fixed';
+            v.style.top = '0';
+            v.style.left = '0';
+            v.style.width = '100vw';
+            v.style.height = '100vh';
+            v.style.zIndex = '1';
+          } else {
+            v.style.position = '';
+            v.style.top = '';
+            v.style.left = '';
+            v.style.width = '';
+            v.style.height = '';
+            v.style.zIndex = '';
+          }
+        } else {
+          v.classList.remove('block');
+          v.classList.add('hidden');
+        }
+      });
+    };
+  </script>
+
+  <!-- Master App Scripts -->
+  <script src="globe.js"></script>
+  <script src="underwater.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
