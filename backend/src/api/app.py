@@ -120,6 +120,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning("Qdrant initialization skipped or offline: %s", str(e))
 
+    # Load Member-3 predictive ML models exactly once (MHW TCN forecaster +
+    # 1D-CNN QC autoencoder). Trains quick CPU fallbacks if checkpoints absent.
+    try:
+        from src.ml import warmup as ml_warmup
+        ml_warmup()
+        log.info("Predictive ML models ready: MHW forecaster + sensor QC autoencoder")
+    except Exception as e:
+        log.warning("ML model warmup skipped or failed: %s", str(e))
+
     console.rule("[bold green]🌊 VARUNA Marine Intelligence System — Ready[/bold green]")
     yield
     console.rule("[dim]VARUNA — Graceful Shutdown[/dim]")
@@ -165,6 +174,11 @@ from src.api.ws import router as ws_router
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(api_router, prefix="/api")
 app.include_router(ws_router)
+
+# Member-3 predictive ML service endpoints (/api/v1/ml/*)
+from src.ml import ml_router as ml_api_router
+
+app.include_router(ml_api_router)
 
 from src.api.ws import ws_chat
 app.add_api_websocket_route("/ws/chat", ws_chat)
