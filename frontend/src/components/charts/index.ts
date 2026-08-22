@@ -1,3 +1,4 @@
+export * from './OceanChart';
 export * from './DepthProfile';
 export * from './TSIsopycnals';
 export * from './HovmollerDiagram';
