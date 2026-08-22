@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     data_raw_dir: str = Field("./data/raw", alias="DATA_RAW_DIR")
     data_parquet_dir: str = Field("./data/processed", alias="DATA_PARQUET_DIR")
 
+    # ── ML real-data sources (Member 3) ────────────────
+    #: Master switch: serve MHW forecasts from the live Supabase ARGO archives
+    ml_real_data: bool = Field(False, alias="VARUNA_ML_REAL_DATA")
+    #: ';'-separated Supabase Postgres DSNs (time-range routing is automatic).
+    #: Empty -> falls back to physics-informed synthetic data paths.
+    argo_db_urls: str = Field("", alias="VARUNA_ARGO_DB_URLS")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
