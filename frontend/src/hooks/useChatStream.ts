@@ -13,6 +13,18 @@ import { postAgentChat, postChatFast } from "@/lib/api/copilot";
 export type { ChatMessage, AgentExecutionTrace, TaskExecutionStep };
 export type ChatMode = "agent" | "quick";
 
+export interface PipelineStepEvent {
+  stage: "PLANNER" | "SQL_GEN" | "RETRIEVAL" | "BIODIVERSITY" | "SYNTHESIZER" | "INTENT" | string;
+  status: "RUNNING" | "DONE" | "FAILED" | "COMPLETED";
+  task_id?: string;
+  message?: string;
+  duration_ms?: number;
+  row_count?: number;
+  plan_id?: string;
+  task_ids?: string[];
+  params?: Record<string, any>;
+}
+
 export function useChatStream() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -30,10 +42,10 @@ export function useChatStream() {
       return;
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const wsUrl = apiUrl.replace("http", "ws");
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL || apiUrl.replace(/^http/, "ws") + "/ws/chat";
 
     try {
-      const ws = new WebSocket(`${wsUrl}/ws/chat?token=dev-token`);
+      const ws = new WebSocket(wsBase);
 
       ws.onopen = () => {
         setError(null);
@@ -44,22 +56,64 @@ export function useChatStream() {
           const msg = JSON.parse(event.data);
           const { type, data } = msg;
 
-          if (type === "token") {
+          if (type === "pipeline_step") {
+            const step: PipelineStepEvent = data;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (!last || last.role !== "assistant") return prev;
+
+              const existingTrace = last.agent_trace || {
+                plan_id: step.plan_id || "plan_live",
+                total_latency_ms: 0,
+                planner_model: "nvidia/nemotron-3-super-120b-a12b:free",
+                topological_order: [],
+                tasks: [],
+              };
+
+              const taskId = step.task_id || `task_${step.stage.toLowerCase()}`;
+              const taskIndex = existingTrace.tasks.findIndex((t) => t.task_id === taskId);
+              const normalizedStatus =
+                step.status === "DONE" ? "COMPLETED" : step.status === "RUNNING" ? "RUNNING" : "FAILED";
+
+              let updatedTasks = [...existingTrace.tasks];
+              if (taskIndex >= 0) {
+                updatedTasks[taskIndex] = {
+                  ...updatedTasks[taskIndex],
+                  status: normalizedStatus as any,
+                  duration_ms: step.duration_ms || updatedTasks[taskIndex].duration_ms,
+                  result_summary: step.message || updatedTasks[taskIndex].result_summary,
+                };
+              } else {
+                updatedTasks.push({
+                  task_id: taskId,
+                  agent_type: step.stage,
+                  description: step.message || `${step.stage} Agent Execution`,
+                  status: normalizedStatus as any,
+                  duration_ms: step.duration_ms || 0,
+                  result_summary: step.message || "Executing task",
+                });
+              }
+
+              return [
+                ...prev.slice(0, -1),
+                {
+                  ...last,
+                  agent_trace: {
+                    ...existingTrace,
+                    plan_id: step.plan_id || existingTrace.plan_id,
+                    topological_order: step.task_ids || existingTrace.topological_order,
+                    tasks: updatedTasks,
+                  },
+                },
+              ];
+            });
+          } else if (type === "token") {
             setMessages((prev) => {
               const last = prev[prev.length - 1];
               if (!last || last.role !== "assistant") return prev;
               return [
                 ...prev.slice(0, -1),
                 { ...last, content: last.content + data },
-              ];
-            });
-          } else if (type === "intent") {
-            setMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (!last || last.role !== "assistant") return prev;
-              return [
-                ...prev.slice(0, -1),
-                { ...last, metadata: { ...last.metadata, intent: data } },
               ];
             });
           } else if (type === "sql") {
@@ -89,15 +143,6 @@ export function useChatStream() {
                 { ...last, metadata: { ...last.metadata, viz_specs: data } },
               ];
             });
-          } else if (type === "agent_trace") {
-            setMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (!last || last.role !== "assistant") return prev;
-              return [
-                ...prev.slice(0, -1),
-                { ...last, agent_trace: data },
-              ];
-            });
           } else if (type === "done") {
             setIsTyping(false);
             setMessages((prev) => {
@@ -107,14 +152,24 @@ export function useChatStream() {
                 ...prev.slice(0, -1),
                 {
                   ...last,
+                  content: data?.answer_markdown || last.content || "Analysis complete.",
                   isStreaming: false,
                   trace_id: data?.trace_id,
+                  metadata: {
+                    ...last.metadata,
+                    sql: data?.sql || last.metadata?.sql,
+                    rows: data?.rows || last.metadata?.rows,
+                    viz_specs: data?.viz_specs || last.metadata?.viz_specs,
+                    float_ids: data?.float_ids || last.metadata?.float_ids,
+                    intent: data?.intent || last.metadata?.intent,
+                  },
+                  agent_trace: data?.agent_trace || last.agent_trace,
                 },
               ];
             });
           } else if (type === "error") {
             setIsTyping(false);
-            setError(typeof data === "string" ? data : "An error occurred.");
+            setError(typeof data === "string" ? data : "An error occurred during multi-agent orchestration.");
           }
         } catch (e) {
           console.error("Failed to parse WS message", e, event.data);
@@ -127,12 +182,12 @@ export function useChatStream() {
 
       ws.onclose = () => {
         wsRef.current = null;
-        setTimeout(() => connect(), 4000);
+        setTimeout(() => connect(), 3000);
       };
 
       wsRef.current = ws;
     } catch {
-      setTimeout(() => connect(), 4000);
+      setTimeout(() => connect(), 3000);
     }
   }, []);
 
@@ -171,22 +226,20 @@ export function useChatStream() {
       setIsTyping(true);
       setError(null);
 
-      // If in quick mode AND WebSocket is ready, use streaming WebSocket
-      if (
-        activeMode === "quick" &&
-        wsRef.current &&
-        wsRef.current.readyState === WebSocket.OPEN
-      ) {
+      // 1. Primary path: Real-time WebSocket Protocol as specified in VARUNA_Frontend_Integration_Guide.md
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
             question: trimmed,
             session: "default",
+            user_lat: null,
+            user_lon: null,
           })
         );
         return;
       }
 
-      // REST API invocation
+      // 2. Fallback path: REST API if WebSocket is connecting or unavailable
       try {
         const payload: ChatIn = {
           question: trimmed,
@@ -226,81 +279,8 @@ export function useChatStream() {
           setMessages((prev) => prev.slice(0, -1));
         }
       } catch (e: any) {
-        // Grounded fallback preview
-        if (activeMode === "agent") {
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (!last || last.role !== "assistant") return prev;
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...last,
-                content:
-                  `### 🌊 VARUNA Multi-Agent Analysis Report\n\n` +
-                  `Query: *${trimmed}*\n\n` +
-                  `1. **Physical Oceanography (INCOIS)**: Analyzed regional profile anomalies across the Indian Ocean basin.\n` +
-                  `2. **Living Resources (CMLRE)**: Cross-referenced thermal tolerance thresholds against ARGO in-situ sensors.\n\n` +
-                  `*Note: Operating in local development preview mode [WMO: 1902303 | Row #4].*`,
-                isStreaming: false,
-                agent_trace: {
-                  plan_id: "plan_demo_9f82",
-                  total_latency_ms: 1180.4,
-                  planner_model: "nvidia/nemotron-ultra-550b",
-                  topological_order: [
-                    "task_01_sql",
-                    "task_02_bio",
-                    "task_03_synth",
-                  ],
-                  tasks: [
-                    {
-                      task_id: "task_01_sql",
-                      agent_type: "SQL_GEN_AGENT",
-                      description:
-                        "Query Arabian Sea dissolved oxygen and temperature profiles for last 6 months",
-                      status: "COMPLETED",
-                      duration_ms: 310.2,
-                      result_summary:
-                        "Retrieved 24 monthly profile rows from public.marine_data",
-                    },
-                    {
-                      task_id: "task_02_bio",
-                      agent_type: "BIODIVERSITY_AGENT",
-                      description:
-                        "Spatio-temporal join with CMLRE Darwin Core living resources (Sardinella longiceps)",
-                      status: "COMPLETED",
-                      duration_ms: 145.8,
-                      result_summary:
-                        "Matched 2 indicator species in Arabian Sea coastal zone (≤50km, ≤7d)",
-                    },
-                    {
-                      task_id: "task_03_synth",
-                      agent_type: "SYNTHESIZER_AGENT",
-                      description:
-                        "Synthesize zero-hallucination Markdown answer with verified provenance citations",
-                      status: "COMPLETED",
-                      duration_ms: 429.0,
-                      result_summary:
-                        "Verified numerical assertions against returned SQL row vectors",
-                    },
-                  ],
-                },
-                metadata: {
-                  intent: "CROSS_DOMAIN_COMPOUND",
-                  sql: "SELECT DATE_TRUNC('month', time) AS month, AVG(temp) AS avg_temp, AVG(doxy) AS avg_doxy FROM public.marine_data WHERE time >= NOW() - INTERVAL '6 months' GROUP BY 1 ORDER BY 1 ASC LIMIT 50;",
-                  rows: [
-                    { month: "2026-03-01", avg_temp: 28.45, avg_doxy: 52.1 },
-                    { month: "2026-04-01", avg_temp: 29.14, avg_doxy: 42.1 },
-                  ],
-                },
-              },
-            ];
-          });
-        } else {
-          setError(
-            e.message || "Failed to establish link with VARUNA Intelligence Core."
-          );
-          setMessages((prev) => prev.slice(0, -1));
-        }
+        setError(e.message || "Failed to establish link with VARUNA Intelligence Core.");
+        setMessages((prev) => prev.slice(0, -1));
       } finally {
         setIsTyping(false);
       }
