@@ -795,10 +795,26 @@
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
         const aspect = texture.image.width / texture.image.height;
-        const planeWidth = 5.2;
-        const planeHeight = planeWidth / aspect;
+        const planeGeometry = new THREE.PlaneGeometry(1, 1, 48, 48);
+        let currentScaleX = 1;
+        let currentScaleY = 1;
 
-        const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, 32, 32);
+        function fitVesselToViewport() {
+          const visibleHeight = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+          const visibleWidth = visibleHeight * camera.aspect;
+          const coverHeight = Math.max(visibleHeight, visibleWidth / aspect) * 1.08;
+          const coverWidth = coverHeight * aspect;
+          planeGeometry.scale(
+            coverWidth / currentScaleX,
+            coverHeight / currentScaleY,
+            1
+          );
+          currentScaleX = coverWidth;
+          currentScaleY = coverHeight;
+        }
+
+        fitVesselToViewport();
+
         const material = new THREE.MeshPhongMaterial({
           map: texture,
           transparent: true,
@@ -808,18 +824,40 @@
           side: THREE.DoubleSide
         });
 
-        const shipMesh = new THREE.Mesh(geometry, material);
+        const shipMesh = new THREE.Mesh(planeGeometry, material);
         shipGroup.add(shipMesh);
+
+        window.addEventListener('resize', fitVesselToViewport);
+
+        const basePositions = planeGeometry.attributes.position.array.slice();
+        shipMesh.userData.basePositions = basePositions;
       });
 
       let time = 0;
       function animate() {
         requestAnimationFrame(animate);
-        time += 0.018;
+        time += 0.022;
 
-        shipGroup.position.y = Math.sin(time * 0.8) * 0.12 + Math.cos(time * 1.3) * 0.05;
-        shipGroup.rotation.x = Math.sin(time * 0.6) * 0.035;
-        shipGroup.rotation.z = Math.cos(time * 0.7) * 0.025;
+        shipGroup.position.y = Math.sin(time * 0.8) * 0.14 + Math.cos(time * 1.3) * 0.06;
+        shipGroup.position.x = Math.sin(time * 0.37) * 0.035;
+        shipGroup.rotation.x = Math.sin(time * 0.6) * 0.045;
+        shipGroup.rotation.y = Math.cos(time * 0.5) * 0.025;
+        shipGroup.rotation.z = Math.cos(time * 0.7) * 0.035;
+
+        const shipMesh = shipGroup.children[0];
+        if (shipMesh) {
+          const positions = shipMesh.geometry.attributes.position;
+          const basePositions = shipMesh.userData.basePositions;
+          for (let i = 0; i < positions.count; i++) {
+            const offset = i * 3;
+            const x = basePositions[offset];
+            const y = basePositions[offset + 1];
+            positions.array[offset + 2] = basePositions[offset + 2]
+              + Math.sin(x * 2.6 + time * 1.8) * 0.025
+              + Math.cos(y * 3.2 + time * 1.25) * 0.018;
+          }
+          positions.needsUpdate = true;
+        }
 
         renderer.render(scene, camera);
       }

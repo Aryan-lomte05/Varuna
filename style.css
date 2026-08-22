@@ -226,6 +226,80 @@ header {
   transition: all 0.2s ease;
 }
 
+#agent-query-input {
+  background: rgba(2, 15, 28, 0.94) !important;
+  color: #f4fbff !important;
+  caret-color: var(--primary-bright);
+  border-color: rgba(46, 230, 198, 0.45);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+#agent-query-input::placeholder {
+  color: #9eb8c9;
+  opacity: 1;
+}
+
+#agent-query-input:focus {
+  background: rgba(2, 15, 28, 0.98) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 640px) {
+  #view-landing > main {
+    align-items: center !important;
+    padding: 76px 16px 20px !important;
+    text-align: center !important;
+  }
+
+  #view-landing > main > div {
+    align-items: center !important;
+    max-width: 100% !important;
+  }
+
+  #view-landing h1 {
+    font-size: clamp(2rem, 10vw, 2.8rem) !important;
+    line-height: 1 !important;
+    margin-bottom: 0.9rem !important;
+  }
+
+  #view-landing p {
+    font-size: 0.88rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  #view-landing .hud-badge-glass {
+    max-width: 100%;
+  }
+
+  #view-landing button {
+    font-size: 0.78rem !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  #view-landing main > div > div:last-child {
+    gap: 6px !important;
+    margin-top: 1rem !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  #view-landing main > div > div:last-child > div {
+    padding: 8px 9px !important;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  #view-landing main > div > div:last-child > div > div:first-child {
+    font-size: 1.05rem !important;
+  }
+
+  #view-landing main > div > div:last-child > div > div:last-child {
+    font-size: 8px !important;
+    letter-spacing: 0.04em !important;
+  }
+}
+
 .search-input:focus {
   border-color: var(--primary-cyan);
   box-shadow: 0 0 12px var(--primary-glow);
