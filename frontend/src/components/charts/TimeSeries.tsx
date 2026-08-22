@@ -20,48 +20,66 @@ export function TimeSeries({ data, variables = ['temp'], title }: TimeSeriesProp
     if (!data || !data.series) return [];
 
     return Object.keys(data.series)
-      .filter(v => variables.includes(v))
-      .map(v => ({
-        x: data.times,
-        y: data.series[v],
-        mode: 'lines',
-        name: v.toUpperCase(),
-        type: 'scatter',
-        line: { width: 2, shape: 'spline' }
-      }));
+      .filter((v) => variables.length === 0 || variables.includes(v))
+      .map((v) => {
+        const color =
+          v.includes('sal') || v.includes('psal')
+            ? '#2BFFBD'
+            : v.includes('doxy') || v.includes('oxy')
+            ? '#00F0FF'
+            : '#FF6B4A';
+
+        return {
+          x: data.times,
+          y: data.series[v],
+          mode: 'lines+markers',
+          name: v.toUpperCase(),
+          type: 'scatter',
+          line: { width: 2.5, shape: 'spline', color },
+          marker: { size: 5, color },
+        };
+      });
   }, [data, variables]);
 
   const layout: Partial<Layout> = {
     title: {
-      text: title || 'Ocean Variable Time Series',
-      font: { color: '#E2E8F0', family: 'Inter, sans-serif' },
+      text: title || 'Ocean Variable Time Series Trajectory',
+      font: { color: '#E2E8F0', family: 'Inter, sans-serif', size: 12 },
     },
     paper_bgcolor: 'transparent',
-    plot_bgcolor: 'rgba(15, 23, 42, 0.5)',
+    plot_bgcolor: 'rgba(11, 29, 44, 0.4)',
+    height: 310,
+    autosize: true,
     xaxis: {
-      title: { text: 'Time', font: { color: '#94A3B8' } },
-      gridcolor: 'rgba(255,255,255,0.05)',
-      tickfont: { color: '#94A3B8' },
+      title: { text: 'Observation Timestamp / Date', font: { color: '#94A3B8', size: 11 } },
+      gridcolor: 'rgba(255,255,255,0.06)',
+      tickfont: { color: '#94A3B8', size: 10 },
     },
     yaxis: {
-      title: { text: 'Value', font: { color: '#94A3B8' } },
-      gridcolor: 'rgba(255,255,255,0.05)',
-      tickfont: { color: '#94A3B8' },
+      title: { text: 'Sensor Value', font: { color: '#94A3B8', size: 11 } },
+      gridcolor: 'rgba(255,255,255,0.06)',
+      tickfont: { color: '#94A3B8', size: 10 },
     },
-    margin: { l: 60, r: 20, t: 60, b: 60 },
+    margin: { l: 55, r: 25, t: 40, b: 45 },
     showlegend: true,
-    legend: { font: { color: '#94A3B8' }, orientation: 'h', y: -0.2 },
+    legend: {
+      font: { color: '#94A3B8', size: 10 },
+      orientation: 'h',
+      x: 0,
+      y: 1.15,
+    },
     hovermode: 'x unified',
-    autosize: true,
   };
 
+  if (!data || !data.series || Object.keys(data.series).length === 0) return null;
+
   return (
-    <div className="w-full h-full min-h-[400px] glass-card rounded-2xl overflow-hidden p-4">
+    <div className="w-full h-[320px] rounded-xl overflow-hidden bg-[#061422]/90 border border-white/10 p-2">
       <Plot
         data={plotData}
         layout={layout}
         useResizeHandler
-        className="w-full h-full"
+        style={{ width: '100%', height: '310px' }}
         config={{ displayModeBar: false, responsive: true }}
       />
     </div>

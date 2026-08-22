@@ -13,7 +13,6 @@ interface TSIsopycnalsProps {
 
 /**
  * T-S Diagram (Temperature vs Salinity) with calculated Sigma-t Isopycnals.
- * Critical tool for physical oceanographers to identify water masses.
  */
 export function TSIsopycnals({ data, title }: TSIsopycnalsProps) {
   const cleanData = useMemo(() => {
@@ -30,7 +29,6 @@ export function TSIsopycnals({ data, title }: TSIsopycnalsProps) {
   const plotData = useMemo((): Partial<PlotData>[] => {
     if (cleanData.length === 0) return [];
 
-    // 1. Data Points
     const traces: Partial<PlotData>[] = [
       {
         x: cleanData.map((d) => d.psal),
@@ -45,17 +43,17 @@ export function TSIsopycnals({ data, title }: TSIsopycnalsProps) {
           showscale: true,
           colorbar: {
             title: {
-              text: 'Depth (dbar)',
-              font: { color: '#94A3B8' },
+              text: 'Depth',
+              font: { color: '#94A3B8', size: 10 },
             },
-            tickfont: { color: '#94A3B8' },
+            tickfont: { color: '#94A3B8', size: 9 },
+            len: 0.8,
           },
         },
         type: 'scatter',
       },
     ];
 
-    // 2. Isopycnal lines (Sigma-t)
     const psalValues = cleanData.map((d) => d.psal);
     const tempValues = cleanData.map((d) => d.temp);
     const minP = Math.min(...psalValues);
@@ -106,42 +104,43 @@ export function TSIsopycnals({ data, title }: TSIsopycnalsProps) {
   const layout: Partial<Layout> = {
     title: {
       text: title || 'T-S Diagram (Temperature vs Salinity Isopycnals)',
-      font: { color: '#E2E8F0', family: 'Inter, sans-serif' },
+      font: { color: '#E2E8F0', family: 'Inter, sans-serif', size: 12 },
     },
     paper_bgcolor: 'transparent',
-    plot_bgcolor: 'rgba(15, 23, 42, 0.5)',
+    plot_bgcolor: 'rgba(11, 29, 44, 0.4)',
+    height: 310,
+    autosize: true,
     xaxis: {
       title: {
         text: 'Salinity (PSU)',
-        font: { color: '#94A3B8' },
+        font: { color: '#94A3B8', size: 11 },
       },
-      gridcolor: 'rgba(255,255,255,0.05)',
-      tickfont: { color: '#94A3B8' },
+      gridcolor: 'rgba(255,255,255,0.06)',
+      tickfont: { color: '#94A3B8', size: 10 },
     },
     yaxis: {
       title: {
         text: 'Temperature (°C)',
-        font: { color: '#94A3B8' },
+        font: { color: '#94A3B8', size: 11 },
       },
-      gridcolor: 'rgba(255,255,255,0.05)',
-      tickfont: { color: '#94A3B8' },
+      gridcolor: 'rgba(255,255,255,0.06)',
+      tickfont: { color: '#94A3B8', size: 10 },
     },
-    margin: { l: 60, r: 20, t: 50, b: 50 },
+    margin: { l: 55, r: 25, t: 40, b: 45 },
     showlegend: true,
-    legend: { font: { color: '#94A3B8' } },
+    legend: { font: { color: '#94A3B8', size: 10 } },
     hovermode: 'closest',
-    autosize: true,
   };
 
   if (cleanData.length === 0) return null;
 
   return (
-    <div className="w-full h-full min-h-[360px] glass-card rounded-2xl overflow-hidden p-3">
+    <div className="w-full h-[320px] rounded-xl overflow-hidden bg-[#061422]/90 border border-white/10 p-2">
       <Plot
         data={plotData}
         layout={layout}
         useResizeHandler
-        className="w-full h-full"
+        style={{ width: '100%', height: '310px' }}
         config={{ displayModeBar: false, responsive: true }}
       />
     </div>

@@ -199,7 +199,7 @@ function ExpandableChartDrawer({
 
       {/* Collapsible Chart Body */}
       {isOpen && (
-        <div className="p-2 w-full animate-in fade-in duration-200">
+        <div className="p-2 w-full min-h-[330px] animate-in fade-in duration-200">
           <ChartRouter vizSpecs={vizSpecs} rows={rows} />
         </div>
       )}

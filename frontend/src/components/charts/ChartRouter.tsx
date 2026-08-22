@@ -71,7 +71,9 @@ export function ChartRouter({ vizSpecs, rows }: ChartRouterProps) {
         if (pids.length > 0) profileData = chartData.profiles[pids[0]];
       }
       if (!profileData || profileData.length === 0) return null;
-      return <DepthProfile data={profileData} variable="temp" title={vizSpecs?.title || 'Vertical CTD Depth Profile (Temperature vs Depth)'} />;
+      const sample = profileData[0] || {};
+      const detectedVar = vizSpecs?.y_variable || Object.keys(sample).find((k) => ['temp', 'temperature', 'psal', 'salinity', 'doxy'].includes(k.toLowerCase())) || 'temp';
+      return <DepthProfile data={profileData} variable={detectedVar} title={vizSpecs?.title || 'Ocean CTD Depth Profile (Horizontal)'} />;
     }
 
     case 'time_series': {
