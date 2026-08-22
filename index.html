@@ -73,6 +73,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 1));
+      font-family: 'Outfit', 'Trebuchet MS', sans-serif;
     }
 
     .title-glow {
@@ -107,12 +108,19 @@
       padding: 6px 14px;
       border-radius: 8px;
       color: #c8ddf5;
-      transition: all 0.2s ease;
+      border: 0;
+      background: transparent;
+      transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
       font-weight: 600;
+      cursor: pointer;
+      will-change: color, background-color;
     }
     .nav-tab-btn:hover {
       color: #83ffe3;
       background: rgba(46, 230, 198, 0.12);
+    }
+    .nav-tab-btn:active {
+      background: rgba(46, 230, 198, 0.24);
     }
     .nav-tab-btn.active {
       color: #83ffe3;
@@ -172,7 +180,6 @@
 
     <!-- Clean Navigation Tab Bar -->
     <nav class="hidden md:flex items-center gap-2 font-jakarta text-xs font-semibold">
-      <button data-view-target="view-landing" class="nav-tab-btn active">Landing Page</button>
       <button data-view-target="view-command-center" class="nav-tab-btn">Command Center</button>
       <button data-view-target="view-multi-agent" class="nav-tab-btn">Multi-Agent AI</button>
       <button data-view-target="view-biodiversity" class="nav-tab-btn">Biodiversity</button>
