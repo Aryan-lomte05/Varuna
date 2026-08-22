@@ -27,6 +27,13 @@ from src.rag.query_rewriter import detect_intent_fast
 from src.memory.conversation import append_message, build_history_prompt
 from src.memory.personalization import get_user_preferences
 from src.observability.tracer import get_trace, pipeline_span, store_trace
+# Member-3 ML contracts — single source of truth lives in src.ml
+from src.ml import (
+    MHWForecastRequest,
+    MHWForecastResponse,
+    ProfileQCRequest,
+    ProfileQCResponse,
+)
 
 router = APIRouter()
 
@@ -231,44 +238,10 @@ class SpatialCorrelationRecord(BaseModel):
     in_situ_doxy: float = Field(..., description="Observed dissolved oxygen (µmol/kg)", examples=[44.2])
     thermal_stress_delta: float = Field(..., description="Departure from species thermal optimum maximum (+°C)", examples=[3.4])
 
-class MHWForecastRequest(BaseModel):
-    ocean_basin: str = Field("arabian_sea", examples=["arabian_sea"])
-    forecast_days: int = Field(7, description="Forecast horizon in days (7 or 14)", examples=[7])
 
-class MHWForecastResponse(BaseModel):
-    ocean_basin: str = Field(..., examples=["arabian_sea"])
-    forecast_horizon_days: int = Field(..., examples=[7])
-    predicted_mean_anomaly: float = Field(..., examples=[2.4])
-    mhw_declaration_probability: float = Field(..., examples=[0.88])
-    forecast_time_series: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        examples=[
-            [
-                {"date": "2026-08-17", "predicted_sst": 30.1, "climatological_baseline": 28.1, "anomaly": 2.0},
-                {"date": "2026-08-18", "predicted_sst": 30.3, "climatological_baseline": 28.1, "anomaly": 2.2},
-                {"date": "2026-08-19", "predicted_sst": 30.6, "climatological_baseline": 28.1, "anomaly": 2.5},
-                {"date": "2026-08-20", "predicted_sst": 30.8, "climatological_baseline": 28.1, "anomaly": 2.7},
-                {"date": "2026-08-21", "predicted_sst": 31.0, "climatological_baseline": 28.1, "anomaly": 2.9},
-                {"date": "2026-08-22", "predicted_sst": 31.2, "climatological_baseline": 28.1, "anomaly": 3.1},
-                {"date": "2026-08-23", "predicted_sst": 31.3, "climatological_baseline": 28.1, "anomaly": 3.2}
-            ]
-        ]
-    )
-
-class ProfileQCRequest(BaseModel):
-    platform_number: int = Field(..., examples=[1902303])
-    pressures: List[float] = Field(..., examples=[[5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0]])
-    temperatures: List[float] = Field(..., examples=[[29.4, 29.3, 28.8, 26.2, 21.0, 14.5, 9.2, 5.1]])
-    salinities: List[float] = Field(..., examples=[[35.8, 35.8, 35.9, 36.1, 35.7, 35.2, 34.9, 34.8]])
-
-class ProfileQCResponse(BaseModel):
-    platform_number: int = Field(..., examples=[1902303])
-    is_anomalous: bool = Field(False, examples=[False])
-    reconstruction_mse: float = Field(0.0034, examples=[0.0034])
-    detected_sensor_issue: Optional[str] = Field(None, examples=[None])
-    recommended_qc_flag: int = Field(1, description="1=Good, 2=Probably Good, 3=Potentially Correctable, 4=Bad", examples=[1])
-    status_message: str = Field("Profile curve matches expected hydrostatic physical profile.", examples=["Profile curve matches expected hydrostatic physical profile."])
-
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Mock Baseline Dataset for Instant Demonstration Execution
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Mock Baseline Dataset for Instant Demonstration Execution
@@ -791,25 +764,16 @@ async def get_stats(
     response_model=MHWForecastResponse,
     tags=["🧠 Predictive ML & Deep Sensor QC"],
     summary="7-Day Spatio-Temporal Marine Heatwave Forecast",
-    description="Executes ConvLSTM predictive forecasting on historical 2°×2° Indian Ocean physical sensor grids to predict sea surface temperature anomaly surfaces and MHW declaration probability $T+7\\text{ days}$ ahead.",
+    description="Executes TCN predictive forecasting on historical 2°×2° Indian Ocean physical sensor grids to predict sea surface temperature anomaly surfaces and MHW declaration probability $T+7\\text{ days}$ ahead.",
 )
 async def forecast_mhw(req: MHWForecastRequest = Body(...)):
-    # Model inference response
-    return MHWForecastResponse(
-        ocean_basin=req.ocean_basin,
-        forecast_horizon_days=req.forecast_days,
-        predicted_mean_anomaly=2.4,
-        mhw_declaration_probability=0.88,
-        forecast_time_series=[
-            {"date": "2026-08-17", "predicted_sst": 30.1, "climatological_baseline": 28.1, "anomaly": 2.0},
-            {"date": "2026-08-18", "predicted_sst": 30.3, "climatological_baseline": 28.1, "anomaly": 2.2},
-            {"date": "2026-08-19", "predicted_sst": 30.6, "climatological_baseline": 28.1, "anomaly": 2.5},
-            {"date": "2026-08-20", "predicted_sst": 30.8, "climatological_baseline": 28.1, "anomaly": 2.7},
-            {"date": "2026-08-21", "predicted_sst": 31.0, "climatological_baseline": 28.1, "anomaly": 2.9},
-            {"date": "2026-08-22", "predicted_sst": 31.2, "climatological_baseline": 28.1, "anomaly": 3.1},
-            {"date": "2026-08-23", "predicted_sst": 31.3, "climatological_baseline": 28.1, "anomaly": 3.2}
-        ]
-    )
+    from src.ml import predict_mhw_trend
+    try:
+        return predict_mhw_trend(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"MHW forecast inference failed: {exc}")
 
 
 @router.post(
@@ -820,14 +784,13 @@ async def forecast_mhw(req: MHWForecastRequest = Body(...)):
     description="Unsupervised 1D Convolutional Autoencoder scanning vertical profile pressure curves to identify sensor drift, optical biofouling, or pressure gauge spikes.",
 )
 async def detect_sensor_qc(req: ProfileQCRequest = Body(...)):
-    return ProfileQCResponse(
-        platform_number=req.platform_number,
-        is_anomalous=False,
-        reconstruction_mse=0.0034,
-        detected_sensor_issue=None,
-        recommended_qc_flag=1,
-        status_message="Profile curve matches expected hydrostatic physical profile. QC Flag 1 (Good)."
-    )
+    from src.ml import evaluate_profile
+    try:
+        return evaluate_profile(req)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Sensor QC inference failed: {exc}")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -847,7 +810,7 @@ async def export_data(
     from fastapi.responses import Response
     from src.utils.export_service import format_export
 
-    rows = run_sql(sql, limit=1000)
+    rows = run_sql(sql, limit=100000)
     content, media_type, filename = format_export(rows, format)
 
     return Response(

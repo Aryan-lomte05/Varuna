@@ -62,7 +62,6 @@ def get_pool(db: str = "db2") -> Optional[Any]:
     global _pool_db1, _pool_db2, _db1_available, _db2_available
     if not _has_psycopg or ConnectionPool is None:
         return None
-
     if db == "db1":
         if not _db1_available:
             return None
@@ -358,20 +357,27 @@ def get_active_floats(limit: int = 500) -> List[Dict[str, Any]]:
     except Exception:
         pass
 
-    # 2. Fallback to aggregated query across marine_data
-    sql_agg = f"""
-    SELECT platform_number AS wmo_id,
-           MAX(time) AS last_seen,
-           AVG(latitude) AS last_lat,
-           AVG(longitude) AS last_lon,
-           COUNT(*) AS total_profiles
-    FROM public.marine_data
-    GROUP BY platform_number
-    LIMIT {limit}
-    """
-    rows = run_sql(sql_agg, limit=limit)
-    if rows:
-        return rows
+    # 2. Fallback to aggregated query across marine_data (with 5s timeout guard)
+    try:
+        sql_agg = f"""
+        SET LOCAL statement_timeout = '5000';
+        SELECT platform_number AS wmo_id,
+               MAX(time) AS last_seen,
+               AVG(latitude) AS last_lat,
+               AVG(longitude) AS last_lon,
+               COUNT(*) AS total_profiles
+        FROM public.marine_data
+        WHERE pres < 25
+        GROUP BY platform_number
+        ORDER BY MAX(time) DESC
+        LIMIT {limit}
+        """
+        rows = _execute_single_db("db2", sql_agg)
+        if rows:
+            return rows
+    except Exception as e:
+        log.warning("Floats aggregation fallback timed out or failed: %s", str(e))
+
     return MOCK_FLOATS
 
 

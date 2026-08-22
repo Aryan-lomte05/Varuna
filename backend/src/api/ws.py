@@ -150,6 +150,7 @@ async def ws_chat(websocket: WebSocket):
                     "trace_id": trace_id,
                     "answer_markdown": final_result.answer_markdown,
                     "sql": final_result.sql,
+                    "rows": final_result.rows,
                     "row_count": len(final_result.rows) if final_result.rows else 0,
                     "intent": final_result.intent,
                     "float_ids": final_result.float_ids,
