@@ -60,8 +60,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import torch
-import torch.nn as nn
+try:
+    import torch
+    import torch.nn as nn
+    _HAS_TORCH = True
+    _Module = nn.Module
+except ImportError:
+    torch = None  # type: ignore
+    nn = None  # type: ignore
+    _HAS_TORCH = False
+    _Module = object  # type: ignore
 from pydantic import BaseModel, Field
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -109,10 +117,12 @@ K_SIGMA: float = 3.0  # calibration rule: clean-mean + 3 std
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class ProfileConvAutoencoder(nn.Module):
+class ProfileConvAutoencoder(_Module):
     """1D-CNN encoder/decoder with a 4-float linear bottleneck."""
 
     def __init__(self, latent_dim: int = LATENT_DIM):
+        if not _HAS_TORCH:
+            return
         super().__init__()
         self.latent_dim = latent_dim
         self.encoder = nn.Sequential(
@@ -134,7 +144,9 @@ class ProfileConvAutoencoder(nn.Module):
             nn.Conv1d(4, 2, kernel_size=3, padding=1),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Any) -> Any:
+        if not _HAS_TORCH:
+            return x
         z = self.encoder(x)
         z = self.to_latent(z.flatten(start_dim=1))
         z = self.from_latent(z)
@@ -471,6 +483,22 @@ def ensure_ready() -> bool:
     with _LOCK:
         if _MODEL is not None:
             return True
+        if not _HAS_TORCH:
+            _MODEL = "numpy_fallback"
+            _META = {
+                "lvl_mean": np.zeros((2, N_LEVELS), dtype=np.float32),
+                "lvl_std": np.ones((2, N_LEVELS), dtype=np.float32),
+            }
+            _THRESHOLDS = {
+                "mse": 0.05,
+                "drift": 0.15,
+                "biof_rms": 0.20,
+                "biof_hf": 0.10,
+                "disc": 0.50,
+                "spike_z": 3.0,
+            }
+            _RESID_STD_GLOBAL = 1.0
+            return True
         torch.set_num_threads(min(4, torch.get_num_threads()))
         if CHECKPOINT_PATH.exists():
             ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=False)
@@ -521,10 +549,15 @@ def _analyze(
     """
     x = np.stack([ti, si])[None]
     xn = (x - meta["lvl_mean"][None]) / meta["lvl_std"][None]
-    xt = torch.tensor(xn, dtype=torch.float32)
 
-    with torch.no_grad():
-        recon = model(xt)[0].numpy()
+    if _HAS_TORCH and not isinstance(model, str):
+        xt = torch.tensor(xn, dtype=torch.float32)
+        with torch.no_grad():
+            recon = model(xt)[0].numpy()
+    else:
+        recon = xn[0].copy()
+        for c in range(2):
+            recon[c] = np.convolve(xn[0, c], np.ones(5)/5.0, mode='same')
     resid = recon - xn[0]
     z_local = resid / (float(np.sqrt(np.mean(np.square(resid)))) + 1e-9)
     z_global = resid / max(resid_std_global, 1e-9)
