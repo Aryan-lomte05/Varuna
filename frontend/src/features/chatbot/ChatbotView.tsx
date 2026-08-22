@@ -28,7 +28,7 @@ export function ChatbotView() {
   const [hoverCoords, setHoverCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden p-2 gap-2 select-none font-mono">
+    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden p-2 gap-2 select-none font-sans">
       {/* ── Top Chatbot Context Header ───────────────────────────────────── */}
       <div className="px-3 py-1.5 rounded-lg bg-[#0B1D2C]/90 border border-white/10 flex items-center justify-between shrink-0 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-3">

@@ -121,22 +121,58 @@ function ProvenanceMarkdown({
   };
 
   return (
-    <div className="prose prose-ocean max-w-none">
+    <div className="font-sans text-zinc-100 text-[14px] leading-relaxed select-text space-y-2">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          h1: ({ children }) => (
+            <h1 className="text-[16px] font-bold text-white border-b border-white/10 pb-1.5 mb-2.5 flex items-center gap-2">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-[15px] font-bold text-white border-b border-white/10 pb-1 mb-2 flex items-center gap-2">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-[14.5px] font-bold text-[#83FFE3] mb-1.5 flex items-center gap-1.5">
+              {children}
+            </h3>
+          ),
+          h4: ({ children }) => (
+            <h4 className="text-[14px] font-semibold text-[#2EE6C6] mb-1">
+              {children}
+            </h4>
+          ),
           p: ({ children }) => {
             if (typeof children === "string") {
-              return <p className="mb-3 text-sm">{renderWithBadges(children)}</p>;
+              return <p className="mb-2.5 text-[13.5px] leading-relaxed text-zinc-100">{renderWithBadges(children)}</p>;
             }
-            return <p className="mb-3 text-sm">{children}</p>;
+            return <p className="mb-2.5 text-[13.5px] leading-relaxed text-zinc-100">{children}</p>;
           },
+          ul: ({ children }) => (
+            <ul className="space-y-1.5 mb-3 pl-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal pl-5 space-y-1 mb-3 text-[13.5px] text-zinc-100">{children}</ol>
+          ),
           li: ({ children }) => {
             if (typeof children === "string") {
-              return <li className="text-sm">{renderWithBadges(children)}</li>;
+              return <li className="text-[13.5px] leading-relaxed text-zinc-100">{renderWithBadges(children)}</li>;
             }
-            return <li className="text-sm">{children}</li>;
+            return <li className="text-[13.5px] leading-relaxed text-zinc-100">{children}</li>;
           },
+          strong: ({ children }) => (
+            <strong className="font-bold text-white bg-white/10 px-1 py-0.5 rounded text-[13px] border border-white/10 shadow-sm">
+              {children}
+            </strong>
+          ),
+          code: ({ children }) => (
+            <code className="font-mono text-[12px] bg-[#00FFC6]/15 text-[#00FFC6] px-1.5 py-0.5 rounded border border-[#00FFC6]/25 font-semibold">
+              {children}
+            </code>
+          ),
         }}
       >
         {content}
@@ -589,11 +625,11 @@ export function ChatPanel({
               {/* Message Bubble Container */}
               <div
                 className={`
-                  max-w-[92%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed
+                  max-w-[92%] rounded-2xl p-4 text-[13.5px] leading-relaxed font-sans
                   ${
                     m.role === "user"
-                      ? "bg-bg-1 border border-border text-text rounded-tr-sm shadow-xl"
-                      : "bg-bg-2/70 border border-border/50 backdrop-blur-md rounded-tl-sm shadow-inner text-text"
+                      ? "bg-[#0E2C42] border border-[#2EE6C6]/30 text-white rounded-tr-sm shadow-md"
+                      : "bg-[#081B2B]/95 border border-white/10 backdrop-blur-md rounded-tl-sm shadow-xl text-zinc-100"
                   }
                 `}
               >

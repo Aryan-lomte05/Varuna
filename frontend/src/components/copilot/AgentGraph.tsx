@@ -156,7 +156,7 @@ export function AgentGraph({
   totalLatencyMs,
 }: AgentGraphProps) {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (!steps || steps.length === 0) return null;
 
@@ -333,41 +333,35 @@ export function AgentGraph({
   };
 
   return (
-    <div className="w-full my-3 rounded-2xl bg-bg-2/80 border border-border-strong backdrop-blur-xl overflow-hidden shadow-2xl">
-      {/* ── Top DAG Telemetry Header ────────────────────────────────────────── */}
+    <div className="w-full mb-3 rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden transition-all">
+      {/* ── Minimal DAG Disclosure Header ────────────────────────────────────── */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="px-3.5 py-2.5 bg-bg-1/90 border-b border-white/5 flex items-center justify-between cursor-pointer select-none hover:bg-bg-1 transition-colors"
+        className="px-3 py-1.5 flex items-center justify-between cursor-pointer select-none hover:bg-white/[0.04] transition-colors"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-accent/15 border border-accent/30 flex items-center justify-center">
-            <Cpu size={12} className="text-accent" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-bold text-text uppercase tracking-tight">
-                Multi-Agent Task DAG
-              </span>
-              <span className="text-[9px] font-mono text-accent bg-accent/10 px-1.5 py-0.2 rounded border border-accent/20">
-                {planId.replace("plan_", "")}
-              </span>
-            </div>
-            <p className="text-[9px] font-mono text-text-muted">
-              Orchestrator: <span className="text-zinc-300">{plannerModel}</span>
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <Cpu size={12} className="text-zinc-400" />
+          <span className="text-[10px] font-mono text-zinc-400">
+            Multi-Agent Mesh: <b className="text-zinc-300 font-semibold">{steps.length} Sub-Agents</b>
+          </span>
+          {isExecuting && (
+            <span className="flex items-center gap-1 text-[9px] font-mono text-[#00FFC6] animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FFC6]" />
+              <span>Executing...</span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
-          {computedLatency > 0 && (
-            <div className="flex items-center gap-1 text-[10px] font-mono text-glow bg-glow/10 px-2 py-0.5 rounded-full border border-glow/30">
-              <Clock size={10} />
-              <span>{Math.round(computedLatency)}ms total</span>
-            </div>
+          {computedLatency > 0 && !isExecuting && (
+            <span className="text-[9px] font-mono text-zinc-400">
+              {Math.round(computedLatency)}ms
+            </span>
           )}
-          <button className="text-zinc-500 hover:text-zinc-300 transition-colors p-1">
-            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
+          <span className="text-[9px] font-mono text-zinc-400 flex items-center gap-1 hover:text-white">
+            {isExpanded ? "Collapse" : "Inspect Process"}
+            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+          </span>
         </div>
       </div>
 
