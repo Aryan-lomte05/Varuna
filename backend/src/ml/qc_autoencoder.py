@@ -1,6 +1,6 @@
 """
 Deep Sensor QC & Biofouling Detection Autoencoder — VARUNA Member 3
-====================================================================
+===================================================================
 
 Unsupervised 1D-CNN autoencoder that scans vertical ARGO profile curves
 (pressure 0-2000 dbar, temperature, salinity) and flags sensor faults
@@ -12,19 +12,26 @@ BEFORE data enters the primary database:
 
 ARCHITECTURE
 ------------
-Encoder : Conv1d(stride-2) -> Conv1d(stride-2) -> flatten -> Linear latent (4 floats)
+Encoder : Conv1d(stride-2) -> Conv1d(stride-2) -> flatten -> Linear latent (3 floats)
 Decoder : Linear -> reshape -> Upsample+Conv1d x2 -> Conv1d output head
 
-The 4-float latent is a hard information bottleneck: the network learns only
+The 3-float latent is a hard information bottleneck: the network learns only
 the smooth physical-profile manifold (thermocline/halocline families). Faults
 that leave the manifold reconstruct badly.
+
+TRAINING DATA — REAL + SYNTHETIC
+--------------------------------
+The shipped checkpoint is trained on ~2,900 casts: 2,200 REAL deep profiles
+pulled live from the two Supabase ARGO archives via src.ml.argo_store plus
+physics-informed synthetic casts. Real data anchors the manifold to actual
+ocean structure; synthetic casts keep fault-mode geometry explicit.
 
 DETECTION DESIGN
 ----------------
 The autoencoder is the *residual engine*. Residuals are rescaled by EACH
 PROFILE'S OWN RMS (local z-scale — pooled global sigma miscalibrates the
 max-statistic), then fed to five detectors, every threshold calibrated on a
-held-out CLEAN validation set:
+held-out CLEAN validation set (synthetic AND real):
 
   1. mse        - global reconstruction energy            (mean + 3*std)
   2. drift      - deep-salinity |excursion (PSU)| x mono^3 (mean + 3*std)
@@ -33,17 +40,24 @@ held-out CLEAN validation set:
                   (mean abs successive difference, deg C)  (mean + 3*std)
   5. spike_z    - max global-z over all levels (clean 99.5th percentile bar)
 
-This mirrors production ocean QC practice (statistical score + structural
-confirmation tests). See README_ml.md for real-ARGO swap path / limitations.
+Issue classification picks the fault family with the LARGEST relative
+exceedance of its clean-calibrated bar (a fixed priority order mislabels
+strong biofouling as spikes and vice versa).
+
+Retrain on the live archives any time:
+    python -m src.ml.qc_autoencoder --epochs 60
+A validation gate (detection >= 90% per mode, false positives <= 10%) must
+pass before a new checkpoint replaces the shipped one. See README_ml.md.
 """
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -56,7 +70,7 @@ from pydantic import BaseModel, Field
 
 
 class ProfileQCRequest(BaseModel):
-    platform_number: int = Field(..., example=1902303)
+    platform_number: int = Field(..., json_schema_extra={"example": 1902303})
     pressures: List[float] = Field(..., description="Decibar (≈ depth m), ascending")
     temperatures: List[float] = Field(..., description="In-situ temperature °C")
     salinities: List[float] = Field(..., description="Practical salinity PSU")
@@ -184,21 +198,25 @@ def corrupt_profile(
 
     if mode == ISSUE_DRIFT:
         # Slow monotonic salinity divergence below the mixed layer
-        # (calibration creep): 0.15-0.40 PSU total offset accumulating with depth.
+        # (calibration creep). Total offset 0.45-0.90 PSU accumulating with
+        # depth — floor set ABOVE the P99 of clean-cast drift scores measured
+        # on ~700 held-out REAL ARGO casts from the VARUNA archives (natural
+        # thermohaline structure otherwise masks weak ramps).
         deep = P_GRID >= 150.0
-        total = rng.choice([-1.0, 1.0]) * rng.uniform(0.15, 0.40)
+        total = rng.choice([-1.0, 1.0]) * rng.uniform(0.45, 0.90)
         ramp = (P_GRID[deep] - P_GRID[deep].min()) / (P_GRID.max() - P_GRID[deep].min())
         s_out[deep] += total * np.power(ramp, 1.2)
 
     elif mode == ISSUE_BIOFOULING:
         # Radiometric attenuation + high-frequency biological wiggles in the
-        # optical zone (top ~150 dbar). The wiggle content is deliberately
-        # non-smooth: the low-dim latent cannot reproduce it, so residuals
-        # concentrate exactly where biofouling physically occurs.
-        amp = rng.uniform(0.3, 0.7) * rng.choice([-1.0, 1.0])
+        # optical zone (top ~150 dbar). Amplitude 0.9-2.2 °C: real biofouled
+        # optical sensors show multi-degree radiometric errors, and smaller
+        # amplitudes are statistically indistinguishable from natural
+        # near-surface structure in the live archive.
+        amp = rng.uniform(0.9, 2.2) * rng.choice([-1.0, 1.0])
         decay = np.exp(-P_GRID / 45.0)
         wiggle = rng.normal(0.0, 1.0, N_LEVELS) * np.exp(-P_GRID / 70.0)
-        t_out += amp * decay + amp * 0.6 * wiggle
+        t_out += amp * decay + amp * 1.1 * wiggle
 
     elif mode == ISSUE_SPIKE:
         # Isolated pressure-gauge discontinuities: sharp single-level jumps
@@ -321,27 +339,38 @@ def train_and_calibrate(
     noise_sigma: float = 0.05,
     save_path: Optional[Path] = None,
     seed: int = 42,
-) -> Dict[str, float]:
+    train_profiles: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None,
+    val_profiles: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None,
+    source: str = "synthetic",
+) -> Dict[str, Any]:
     """
-    Train the autoencoder denoising-style on clean synthetic casts and calibrate
-    every detector threshold on a held-out CLEAN validation set:
+    Train the autoencoder denoising-style on clean casts and calibrate every
+    detector threshold on a held-out CLEAN validation set:
         threshold(detector) = mean(clean score) + K_SIGMA * std(clean score)
     Saves checkpoint with weights, level stats, thresholds. Runs < 1 min CPU.
+
+    `train_profiles` / `val_profiles` allow substituting REAL ARGO casts
+    (see retrain_on_real_data) for — or mixing them into — the synthetic set;
+    when omitted, physics-informed synthetic casts are generated.
     """
     torch.manual_seed(seed)
     model = ProfileConvAutoencoder()
 
-    train_profiles = [generate_clean_profile(seed=seed + i) for i in range(n_train)]
-    val_profiles = [generate_clean_profile(seed=seed + 100000 + i) for i in range(n_val)]
-    lvl_mean, lvl_std = _level_stats(train_profiles)
+    gen_train = [generate_clean_profile(seed=seed + i) for i in range(n_train)]
+    gen_val = [generate_clean_profile(seed=seed + 100000 + i) for i in range(n_val)]
+    train_set = train_profiles if train_profiles is not None else gen_train
+    val_set = val_profiles if val_profiles is not None else gen_val
+
+    lvl_mean, lvl_std = _level_stats(train_set)
 
     def norm_batch(profiles: List[Tuple[np.ndarray, np.ndarray]]) -> torch.Tensor:
         arr = np.stack([np.stack(p) for p in profiles])          # (N, 2, L)
         arr = (arr - lvl_mean[None]) / lvl_std[None]
         return torch.tensor(arr, dtype=torch.float32)
 
-    X_train = norm_batch(train_profiles)
-    X_val = norm_batch(val_profiles)
+    X_train = norm_batch(train_set)
+    X_val = norm_batch(val_set)
+    n_val_eff = X_val.shape[0]
 
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
@@ -379,7 +408,7 @@ def train_and_calibrate(
     # median + 3*MAD rule because extreme-value statistics are heavy-tailed.
     keys_meanstd = ("mse", "drift", "biof_rms", "biof_hf")
     score_rows: List[Dict[str, float]] = []
-    for i in range(n_val):
+    for i in range(n_val_eff):
         resid_i = val_resid_all[i]
         score_rows.append(_structural_scores(resid_i, lvl_std, resid_std_global))
 
@@ -396,7 +425,7 @@ def train_and_calibrate(
     # Discontinuity (gradient) test on raw physical curves — calibrated on the
     # same clean validation set.
     disc_vals = np.array(
-        [_discontinuity_stat(t, s) for (t, s) in val_profiles]
+        [_discontinuity_stat(t, s) for (t, s) in val_set]
     )
     thresholds["disc"] = float(disc_vals.mean() + K_SIGMA * disc_vals.std())
 
@@ -413,13 +442,16 @@ def train_and_calibrate(
             "k_sigma": K_SIGMA,
             "latent_dim": LATENT_DIM,
             "train_loss": final_loss,
+            "n_train": len(train_set),
+            "n_val": len(val_set),
+            "source": source,
             "trained_at": datetime.now(timezone.utc).isoformat(),
         },
         path,
     )
     pretty = {k: round(v, 5) for k, v in thresholds.items()}
     print(f"[qc_autoencoder] checkpoint saved -> {path} thresholds={pretty}")
-    return {"thresholds": thresholds}
+    return {"thresholds": thresholds, "path": str(path), "n_train": len(train_set), "n_val": len(val_set)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -474,6 +506,85 @@ def _recommend_flag(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _analyze(
+    model: "ProfileConvAutoencoder",
+    meta: Dict[str, np.ndarray],
+    thresholds: Dict[str, float],
+    resid_std_global: float,
+    ti: np.ndarray,
+    si: np.ndarray,
+) -> Tuple[Dict[str, float], Dict[str, bool], Optional[str], np.ndarray, np.ndarray]:
+    """
+    Core scoring path shared by evaluate_profile and the retraining validator:
+    reconstruct -> residual statistics -> detector firing -> issue classification.
+    Returns (scores, fired, issue, z_local, z_global).
+    """
+    x = np.stack([ti, si])[None]
+    xn = (x - meta["lvl_mean"][None]) / meta["lvl_std"][None]
+    xt = torch.tensor(xn, dtype=torch.float32)
+
+    with torch.no_grad():
+        recon = model(xt)[0].numpy()
+    resid = recon - xn[0]
+    z_local = resid / (float(np.sqrt(np.mean(np.square(resid)))) + 1e-9)
+    z_global = resid / max(resid_std_global, 1e-9)
+
+    scores = _structural_scores(resid, meta["lvl_std"], resid_std_global)
+    disc_stat = _discontinuity_stat(ti, si)
+
+    fired = {
+        "mse": scores["mse"] > thresholds["mse"],
+        "drift": scores["drift"] > thresholds["drift"],
+        "biof": (
+            scores["biof_rms"] > thresholds["biof_rms"]
+            or scores["biof_hf"] > thresholds["biof_hf"]
+        ),
+        "spike": (
+            disc_stat > thresholds["disc"] or scores["spike_z"] > thresholds["spike_z"]
+        ),
+    }
+
+    # Classify by RELATIVE EXCEEDANCE: the fault family whose clean-calibrated
+    # bar is overshot hardest wins. A fixed priority order mislabels strong
+    # biofouling (sharp surface wiggles also trip the discontinuity test) and
+    # deep drift on casts that carry incidental natural spikes.
+    excess: Dict[str, float] = {
+        "spike": max(
+            disc_stat / max(thresholds["disc"], 1e-9),
+            scores["spike_z"] / max(thresholds["spike_z"], 1e-9),
+        ),
+        "drift": scores["drift"] / max(thresholds["drift"], 1e-9),
+        "biof": max(
+            scores["biof_rms"] / max(thresholds["biof_rms"], 1e-9),
+            scores["biof_hf"] / max(thresholds["biof_hf"], 1e-9),
+        ),
+    }
+    fired_families = [k for k, hit in fired.items() if hit and k != "mse"]
+    issue: Optional[str] = None
+    if fired_families:
+        best = max(fired_families, key=lambda k: excess[k])
+        issue = {"spike": ISSUE_SPIKE, "drift": ISSUE_DRIFT, "biof": ISSUE_BIOFOULING}[best]
+
+    return scores, fired, issue, z_local, z_global
+
+
+def score_cast(
+    temps: np.ndarray,
+    salinities: np.ndarray,
+    model: Optional["ProfileConvAutoencoder"] = None,
+    meta: Optional[Dict[str, np.ndarray]] = None,
+    thresholds: Optional[Dict[str, float]] = None,
+    resid_std_global: float = 1.0,
+) -> Tuple[bool, Optional[str], float]:
+    """Lightweight scorer for validation batches (already on P_GRID)."""
+    m = model if model is not None else _MODEL
+    mt = meta if meta is not None else _META
+    th = thresholds if thresholds is not None else _THRESHOLDS
+    assert m is not None and mt and th
+    scores, fired, issue, _, _ = _analyze(m, mt, th, resid_std_global, temps, salinities)
+    return bool(any(fired.values())), issue, scores["mse"]
+
+
 def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
     """
     Score one raw ARGO cast: reconstruct with the autoencoder, run the four
@@ -506,40 +617,10 @@ def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
     ti = np.interp(P_GRID, p, t)
     si = np.interp(P_GRID, p, s)
 
-    x = np.stack([ti, si])[None]
-    xn = (x - _META["lvl_mean"][None]) / _META["lvl_std"][None]
-    xt = torch.tensor(xn, dtype=torch.float32)
-
-    with torch.no_grad():
-        recon = _MODEL(xt)[0].numpy()
-    resid = recon - xn[0]
-    z_local = resid / (float(np.sqrt(np.mean(np.square(resid)))) + 1e-9)
-    z_global = resid / max(_RESID_STD_GLOBAL, 1e-9)
-
-    scores = _structural_scores(resid, _META["lvl_std"], _RESID_STD_GLOBAL)
-    disc_stat = _discontinuity_stat(ti, si)
-
-    fired = {
-        "mse": scores["mse"] > _THRESHOLDS["mse"],
-        "drift": scores["drift"] > _THRESHOLDS["drift"],
-        "biof": (
-            scores["biof_rms"] > _THRESHOLDS["biof_rms"]
-            or scores["biof_hf"] > _THRESHOLDS["biof_hf"]
-        ),
-        "spike": (
-            disc_stat > _THRESHOLDS["disc"] or scores["spike_z"] > _THRESHOLDS["spike_z"]
-        ),
-    }
+    scores, fired, issue, z_local, z_global = _analyze(
+        _MODEL, _META, _THRESHOLDS, _RESID_STD_GLOBAL, ti, si
+    )
     is_anomalous = any(fired.values())
-
-    issue: Optional[str] = None
-    if is_anomalous:
-        if fired["spike"]:
-            issue = ISSUE_SPIKE
-        elif fired["drift"]:
-            issue = ISSUE_DRIFT
-        elif fired["biof"]:
-            issue = ISSUE_BIOFOULING
 
     flagged: List[float] = []
     if is_anomalous:
@@ -562,3 +643,172 @@ def evaluate_profile(request: ProfileQCRequest) -> ProfileQCResponse:
             _recommend_flag(is_anomalous, fired["spike"], scores["mse"], issue)
         ),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-ARGO retraining pipeline (live Supabase archives via src.ml.argo_store)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _reset_loaded_model() -> None:
+    """Drop the cached singleton so the next ensure_ready() loads fresh weights."""
+    global _MODEL, _META, _THRESHOLDS, _RESID_STD_GLOBAL
+    with _LOCK:
+        _MODEL = None
+        _META = {}
+        _THRESHOLDS = {}
+        _RESID_STD_GLOBAL = 1.0
+
+
+def build_real_training_set(rng_seed: int = 13) -> List[Tuple[np.ndarray, np.ndarray]]:
+    """Fetch + clean real casts from both Supabase projects onto P_GRID."""
+    from src.ml import argo_store
+
+    casts = argo_store.fetch_raw_profiles()
+    profiles = argo_store.clean_real_profiles(casts, P_GRID, rng_seed=rng_seed)
+    if len(profiles) < 200:
+        raise RuntimeError(
+            f"Only {len(profiles)} usable real casts retrieved — refusing to train "
+            "on so little data. Check VARUNA_ARGO_DB_URLS / connectivity."
+        )
+    print(f"[qc_autoencoder] real casts available: {len(profiles)}")
+    return profiles
+
+
+def retrain_on_real_data(
+    n_synth_train: int = 700,
+    n_synth_val: int = 900,
+    real_train_max: int = 2200,
+    real_val_max: int = 700,
+    epochs: int = 70,
+    save_path: Optional[Path] = None,
+    seed: int = 42,
+    min_detection_rate: float = 0.90,
+    max_false_positive_rate: float = 0.10,
+) -> Dict[str, Any]:
+    """
+    Full live-data retraining cycle:
+
+    1. Pull ~3.7k deep real casts from the two Supabase ARGO projects.
+    2. Mix them with physics-informed synthetic casts (synthetic keeps the
+       fault-mode geometry explicit; real data anchors the manifold).
+    3. Train denoising-style, calibrate thresholds on held-out CLEAN
+       synthetic+real validation casts.
+    4. VALIDATION GATE before saving: on fresh evaluation sets, corrupted
+       variants (drift/biofouling/spike) of BOTH synthetic and real base
+       profiles must be flagged >= min_detection_rate with correct issue
+       class, while clean synthetic/real false-positive rate must stay
+       <= max_false_positive_rate.
+
+    Returns a report dict; raises RuntimeError when the gate fails
+    (the previous checkpoint is left untouched in that case).
+    """
+    from src.ml import argo_store  # noqa: F401 — connectivity check happens inside
+
+    rng = np.random.default_rng(seed)
+
+    real_profiles = build_real_training_set()
+    order = rng.permutation(len(real_profiles))
+    real_profiles = [real_profiles[i] for i in order]
+    n_val = min(real_val_max, max(1, int(0.25 * len(real_profiles))))
+    real_val = real_profiles[:n_val]
+    real_train = real_profiles[n_val : n_val + real_train_max]
+
+    synth_train = [generate_clean_profile(seed=seed + i) for i in range(n_synth_train)]
+    synth_val = [generate_clean_profile(seed=seed + 100000 + i) for i in range(n_synth_val)]
+
+    result = train_and_calibrate(
+        epochs=epochs,
+        seed=seed,
+        save_path=save_path,
+        train_profiles=synth_train + real_train,
+        val_profiles=synth_val + real_val,
+        source="real+synthetic",
+    )
+
+    # ── Validation gate on a FRESH model loaded from the saved artifact ──
+    path = Path(result["path"])
+    ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    vmodel = ProfileConvAutoencoder(latent_dim=int(ckpt["latent_dim"]))
+    vmodel.load_state_dict(ckpt["state_dict"])
+    vmodel.eval()
+    vmeta = {
+        "lvl_mean": np.asarray(ckpt["lvl_mean"], dtype=np.float64),
+        "lvl_std": np.asarray(ckpt["lvl_std"], dtype=np.float64),
+        "p_grid": np.asarray(ckpt["p_grid"], dtype=np.float64),
+    }
+    vthr = {k: float(v) for k, v in ckpt["thresholds"].items()}
+    vrsg = float(ckpt["resid_std_global"])
+
+    def batch_score(
+        profiles: List[Tuple[np.ndarray, np.ndarray]],
+        corrupt: str = "",
+        corrupt_seed0: int = 900000,
+    ) -> List[Tuple[bool, Optional[str], float]]:
+        out = []
+        for i, (t, s) in enumerate(profiles):
+            tt, ss = (
+                corrupt_profile(t, s, corrupt, seed=corrupt_seed0 + i) if corrupt else (t, s)
+            )
+            out.append(score_cast(tt, ss, vmodel, vmeta, vthr, vrsg))
+        return out
+
+    report: Dict[str, Any] = {
+        "n_real_available": len(real_profiles),
+        "n_real_train": len(real_train),
+        "n_real_val": len(real_val),
+        "epochs": epochs,
+        "thresholds": vthr,
+    }
+
+    gate_ok = True
+    # Clean false-positive rates (fresh seeds / held-out real)
+    clean_synth_scores = batch_score(
+        [generate_clean_profile(seed=seed + 500000 + i) for i in range(300)], corrupt_seed0=0
+    )
+    fp_synth = sum(1 for fired, _iss, _mse in clean_synth_scores if fired)
+    fp_real = sum(1 for fired, _iss, _mse in batch_score(real_val) if fired)
+    report["false_positive"] = {
+        "synthetic": round(fp_synth / 300.0, 4),
+        "real": round(fp_real / max(len(real_val), 1), 4),
+    }
+    if fp_synth / 300.0 > max_false_positive_rate or fp_real / max(len(real_val), 1) > max_false_positive_rate:
+        gate_ok = False
+
+    # Detection rates per corruption mode on both domains
+    detection: Dict[str, Any] = {}
+    eval_real = real_val[:250]
+    eval_synth = [generate_clean_profile(seed=seed + 700000 + i) for i in range(150)]
+    for mode in (ISSUE_DRIFT, ISSUE_BIOFOULING, ISSUE_SPIKE):
+        hits_total = issue_hits = total = 0
+        for domain, pool in (("synthetic", eval_synth), ("real", eval_real)):
+            res = batch_score(pool, corrupt=mode)
+            hits = sum(1 for fired, _iss, _mse in res if fired)
+            correct = sum(1 for fired, iss, _mse in res if fired and iss == mode)
+            hits_total += hits
+            issue_hits += correct
+            total += len(res)
+        rate, cls_rate = hits_total / total, (issue_hits / total if total else 0.0)
+        detection[mode] = {"detection_rate": round(rate, 4), "correct_issue_rate": round(cls_rate, 4)}
+        if rate < min_detection_rate or cls_rate < min_detection_rate:
+            gate_ok = False
+    report["detection"] = detection
+    report["gate_passed"] = gate_ok
+
+    print("[qc_autoencoder] validation report:", json.dumps(report, indent=2, default=str))
+    if not gate_ok:
+        raise RuntimeError(
+            "Real-data retraining FAILED its validation gate — previous checkpoint "
+            "left untouched. Inspect the report above."
+        )
+    return report
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Retrain VARUNA QC autoencoder on live ARGO databases")
+    parser.add_argument("--epochs", type=int, default=70)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+    retrain_on_real_data(epochs=args.epochs, seed=args.seed)

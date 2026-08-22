@@ -46,3 +46,5 @@ apps/backend/chroma/
 .DS_Store
 Thumbs.db
 .next/
+# VARUNA ML runtime caches (machine-local DB snapshots; rebuild automatically)
+backend/src/ml/cache/

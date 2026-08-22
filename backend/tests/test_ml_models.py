@@ -296,3 +296,169 @@ def test_endpoint_qc_mismatched_arrays_is_422(client: TestClient) -> None:
         },
     )
     assert resp.status_code == 422
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-data integration — src.ml.argo_store routing / grid building
+# (all tests here are OFFLINE: databases are simulated via monkeypatching)
+# ─────────────────────────────────────────────────────────────────────────────
+
+from datetime import date, datetime  # noqa: E402
+
+import numpy as np  # noqa: E402
+
+from src.ml import argo_store  # noqa: E402
+
+
+def test_configured_dsns_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VARUNA_ARGO_DB_URLS", "postgresql://a; postgresql://b")
+    assert argo_store.configured_dsns() == ["postgresql://a", "postgresql://b"]
+    monkeypatch.setenv("VARUNA_ARGO_DB_URLS", "")
+    # falls back to built-in defaults (or settings) without raising
+    assert isinstance(argo_store.configured_dsns(), list)
+
+
+def test_routed_window_splits_by_probed_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    ranges = {
+        argo_store.DEFAULT_DSNS[0]: (datetime(2025, 8, 1), datetime(2026, 8, 21)),
+        argo_store.DEFAULT_DSNS[1]: (datetime(2022, 1, 1), datetime(2025, 7, 31)),
+    }
+    monkeypatch.setattr(argo_store, "probe_range", lambda dsn: ranges[dsn])
+    win = argo_store.RoutedWindow(datetime(2025, 7, 15), datetime(2025, 8, 15))
+    assert len(win.segments) == 2
+    hosts = {dsn.split("@")[-1].split(".")[0] for dsn, _, _ in win.segments}
+    assert len(hosts) == 2  # window straddling the boundary hits BOTH projects
+    for _, seg_start, seg_end in win.segments:
+        assert seg_start <= seg_end
+
+
+def test_routed_window_raises_when_uncovered(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        argo_store, "configured_dsns", lambda: ["postgresql://only-one"]
+    )
+    monkeypatch.setattr(
+        argo_store,
+        "probe_range",
+        lambda dsn: (datetime(2025, 1, 1), datetime(2025, 2, 1)),
+    )
+    try:
+        argo_store.RoutedWindow(datetime(2026, 1, 1), datetime(2026, 2, 1))
+        raise AssertionError("expected RuntimeError")
+    except RuntimeError as exc:
+        assert "No ARGO database covers" in str(exc)
+
+
+def _fake_grid_rows(day: date, n_cells: int = 30) -> list:
+    """Canned SQL aggregation rows for the Arabian Sea window.
+
+    la_bin / lo_bin are GLOBAL 2°-bin indices as produced by
+    floor(latitude/2)::int — i.e. lat 6..24°N -> bins 3..11,
+    lon 52..74°E -> bins 26..36.
+    """
+    import datetime as dt
+
+    rows = []
+    for i in range(n_cells):
+        rows.append(
+            {
+                "la_bin": float(3 + i // 10),
+                "lo_bin": float(26 + (i % 10)),
+                "day": day - dt.timedelta(days=i % 3),
+                "temp": 28.0 + i * 0.01,
+                "psal": 35.0 + i * 0.005,
+                "doxy": 200.0 - i,
+                "n": 10 + i,
+            }
+        )
+    return rows
+
+
+def test_build_history_grid_shape_and_fill(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    end = date.today()
+    monkeypatch.setattr(argo_store, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(argo_store, "_MEM_CACHE", {})
+    monkeypatch.setattr(
+        argo_store,
+        "fetch_daily_cell_stats",
+        lambda basin, ed, lookback_days=40: _fake_grid_rows(ed),
+    )
+    res = argo_store.build_history_grid("arabian_sea", end)
+    grid = res["grid"]
+    assert grid.shape == (argo_store.HISTORY_DAYS, argo_store.N_VARS,
+                          argo_store.GRID_H, argo_store.GRID_W)
+    assert np.isfinite(grid).all(), "gap-filling must leave no NaNs"
+    assert res["source"] == "live_argo"
+    assert 0.0 < res["coverage"] <= 1.0
+    assert grid[:, 0].min() > 20.0 and grid[:, 0].max() < 32.0  # sane SST band
+
+
+def test_build_history_grid_rejects_sparse_basins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setattr(argo_store, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(argo_store, "_MEM_CACHE", {})
+    monkeypatch.setattr(
+        argo_store, "fetch_daily_cell_stats", lambda basin, ed, lookback_days=40: []
+    )
+    with pytest.raises(RuntimeError, match="No real ARGO observations"):
+        argo_store.build_history_grid("arabian_sea")
+
+
+def test_clean_real_profiles_deep_salinity_gate() -> None:
+    p_grid = np.geomspace(2.5, 2000.0, argo_store.MIN_LEVELS + 5)
+    deep_p = np.linspace(100.0, 2000.0, argo_store.MIN_LEVELS + 5)
+    good_t = np.linspace(29.0, 4.0, len(deep_p))
+    casts = [
+        {"platform": 1, "cycle": 1, "dir": "A",
+         "pres": deep_p.copy(),
+         "temp": good_t.copy(),
+         "psal": np.full(len(deep_p), 35.0)},                     # healthy
+        {"platform": 2, "cycle": 1, "dir": "A",
+         "pres": deep_p.copy(),
+         "temp": good_t.copy(),
+         "psal": np.full(len(deep_p), 14.5)},                     # garbage cast
+    ]
+    kept = argo_store.clean_real_profiles(casts, p_grid)
+    assert len(kept) == 1  # the deep-salinity sanity gate rejected cast #2
+    assert kept[0][1].min() > 34.0
+
+
+def test_db_history_provider_falls_back_to_synthetic(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.ml.mhw_forecast import db_history_provider
+
+    def boom(*a, **k):
+        raise RuntimeError("database unreachable")
+
+    monkeypatch.setattr(argo_store, "build_history_grid", boom)
+    hist = db_history_provider("arabian_sea", date.today())
+    assert hist.shape == (argo_store.HISTORY_DAYS, argo_store.N_VARS,
+                          argo_store.GRID_H, argo_store.GRID_W)
+    assert np.isfinite(hist).all()
+
+
+def test_real_data_disabled_by_default_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("VARUNA_ML_REAL_DATA", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests::test_real_data_disabled_by_default")
+    monkeypatch.delenv("VARUNA_TEST_ALLOW_REAL_DATA", raising=False)
+    assert argo_store.real_data_enabled() is False
+
+
+def test_enable_real_data_offline_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """enable_real_data(True) must degrade gracefully when no DB is reachable."""
+    from src.ml import mhw_forecast as mf
+
+    def dead_status():
+        return {"databases": [{"host": "x", "reachable": False, "error": "boom"}]}
+
+    monkeypatch.setattr(argo_store, "status", dead_status)
+    try:
+        ok = mf.enable_real_data(True)
+        assert ok is False
+        assert mf.real_data_active() is False
+        # forecasting still works on the synthetic path
+        res = predict_mhw_trend(MHWForecastRequest(ocean_basin="arabian_sea"))
+        assert 0.0 <= res.mhw_probability <= 1.0
+    finally:
+        mf.enable_real_data(False)  # restore deterministic synthetic default

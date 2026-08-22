@@ -21,13 +21,24 @@ instead of a ConvLSTM because:
 3. Fully convolutional design accepts variable grid heights/widths, so one
    shared checkpoint serves arabian_sea / bay_of_bengal / equatorial_io.
 
-DATA ASSUMPTION
----------------
-No real ARGO/satellite archive ships with the hackathon repo, so training and
-default serving use a physics-informed synthetic generator (seasonal cycle +
-red-noise anomaly field + injected MHW events with Gaussian epicenters +
-salinity/DOXY covariates). `set_history_provider()` is the single integration
-point to swap in the real ingestion pipeline later. See README_ml.md.
+DATA SOURCES
+------------
+Two serving paths share one trained model:
+
+1. LIVE MODE (VARUNA_ML_REAL_DATA=1): the input grid comes from the two live
+   Supabase ARGO archives (~3.96M observations, 2022 → present) via
+   src.ml.argo_store — real near-surface observations aggregated into
+   2°×2° cells × day, gap-filled (temporal interpolation → spatial diffusion),
+   cached 6 h. Anomaly baselines use the REAL multi-year day-of-year
+   climatology derived from the same archives; responses carry
+   data_source="live_argo". If the database is unreachable mid-flight the
+   provider falls back to synthetic history with a loud warning so a demo
+   never dies mid-request.
+
+2. SYNTHETIC MODE (default offline/tests): a physics-informed generator
+   (seasonal cycle + red-noise anomaly field + injected MHW events) feeds both
+   training and serving. `set_history_provider()` remains the explicit
+   integration hook for tests and custom pipelines. See README_ml.md.
 
 Public API
 ----------
@@ -116,6 +127,10 @@ class MHWForecastResponse(BaseModel):
         default_factory=dict, description="Per-cell 95% CI half-width surface summary"
     )
     model_latency_ms: float = Field(0.0, description="Inference latency in milliseconds")
+    data_source: str = Field(
+        "synthetic",
+        description="'live_argo' when served from the Supabase archives, else 'synthetic'",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -442,6 +457,9 @@ _META: Dict[str, Any] = {}
 _HISTORY_PROVIDER: Optional[
     Callable[[str, date], np.ndarray]
 ] = None
+#: Provenance of the most recent history fetch (surfaced in responses).
+_DATA_SOURCE: str = "synthetic"
+_REAL_CLIMATOLOGY: bool = False
 
 
 def set_history_provider(
@@ -452,8 +470,90 @@ def set_history_provider(
     (T, 3, H, W) float array [sst_c, psal, doxy] ending at `end_date` inclusive.
     Pass None to restore the synthetic default provider.
     """
-    global _HISTORY_PROVIDER
+    global _HISTORY_PROVIDER, _DATA_SOURCE
     _HISTORY_PROVIDER = provider
+    _DATA_SOURCE = "custom_provider" if provider is not None else "synthetic"
+
+
+def db_history_provider(basin: str, end_date: date) -> np.ndarray:
+    """
+    Live-Supabase history provider: aggregates real near-surface ARGO
+    observations from both projects into the (30, 3, 12, 12) physical grid
+    via src.ml.argo_store. Falls back to the synthetic generator (with a
+    loud warning and a provenance marker) if the archives are unreachable,
+    so a demo never dies mid-request. Results are disk/memory cached with a
+    6 h TTL — warm calls are pure numpy (< 1 ms).
+    """
+    global _DATA_SOURCE
+    try:
+        from src.ml import argo_store
+
+        result = argo_store.build_history_grid(basin, end_date)
+        _DATA_SOURCE = "live_argo"
+        return result["grid"]
+    except Exception as exc:  # noqa: BLE001 — availability path, never crash the API
+        print(
+            f"[mhw_forecast] live ARGO grid unavailable for '{basin}' "
+            f"({type(exc).__name__}: {exc}) — using synthetic history"
+        )
+        _DATA_SOURCE = "live_argo_unavailable_synthetic_fallback"
+        seed = hash((basin, end_date.toordinal())) % (2**31)
+        return generate_synthetic_history(basin, end_date, seed=seed, inject_mhw=False)
+
+
+def enable_real_data(enable: bool = True) -> bool:
+    """
+    Switch the forecaster onto the live Supabase archives:
+      - installs db_history_provider,
+      - prefetches + caches the 30-day grids for every basin and the
+        multi-year climatology (so first requests stay < 100 ms),
+      - enables the real day-of-year climatology as anomaly baseline.
+
+    Returns True when the live path is fully active; False when it fell back
+    to synthetic (never raises — startup must survive an offline database).
+    Call `enable_real_data(False)` to return to the deterministic synthetic path.
+    """
+    global _REAL_CLIMATOLOGY, _DATA_SOURCE
+    if not enable:
+        set_history_provider(None)
+        _REAL_CLIMATOLOGY = False
+        return False
+    try:
+        from src.ml import argo_store
+
+        reachable = [d for d in argo_store.status()["databases"] if d.get("reachable")]
+        if not reachable:
+            raise RuntimeError("no ARGO Supabase project reachable")
+        set_history_provider(db_history_provider)
+        today = date.today()
+        for basin in VALID_BASINS:
+            try:
+                grid_info = argo_store.build_history_grid(basin, today)
+                print(
+                    f"[mhw_forecast] prefetched live grid '{basin}': "
+                    f"coverage={grid_info['coverage']:.1%}, rows={grid_info['obs_rows']}"
+                )
+            except Exception as exc:  # noqa: BLE001 — per-basin fallback at request time
+                print(f"[mhw_forecast] prefetch skipped for '{basin}': {exc}")
+            try:
+                clim = argo_store.build_climatology(basin)
+                print(
+                    f"[mhw_forecast] prefetched climatology '{basin}': "
+                    f"{clim['cells_observed']}/{GRID_H * GRID_W} cells observed"
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"[mhw_forecast] climatology unavailable for '{basin}': {exc}")
+        _REAL_CLIMATOLOGY = True
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[mhw_forecast] real-data mode NOT enabled ({exc}) — staying synthetic")
+        _REAL_CLIMATOLOGY = False
+        return False
+
+
+def real_data_active() -> bool:
+    """True when the installed history provider is the live-database one."""
+    return _HISTORY_PROVIDER is db_history_provider
 
 
 def _default_provider(basin: str, end_date: date) -> np.ndarray:
@@ -491,6 +591,27 @@ def ensure_ready() -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _climatology_surface(
+    basin: str, lat_m: np.ndarray, lon_m: np.ndarray, day_of_year: int
+) -> np.ndarray:
+    """
+    Day-of-year SST climatology for the anomaly baseline. In live mode this is
+    the REAL multi-year archive climatology (bilinearly sampled per cell) with
+    the synthetic seasonal formula filling cells the floats never observed;
+    outside live mode it is purely synthetic. Never raises.
+    """
+    if _REAL_CLIMATOLOGY:
+        try:
+            from src.ml import argo_store
+
+            real = argo_store.climatology_for(basin, lat_m, lon_m, day_of_year)
+            synth = seasonal_climatology_sst(lat_m, day_of_year, basin)
+            return np.where(np.isfinite(real), real, synth)
+        except Exception:  # noqa: BLE001 — baseline must never break a forecast
+            pass
+    return seasonal_climatology_sst(lat_m, day_of_year, basin)
+
+
 def _subwindow_mask(request: MHWForecastRequest) -> Optional[Tuple[slice, slice]]:
     lat_m, lon_m = basin_cell_centers(request.ocean_basin)
     rows = np.ones(GRID_H, dtype=bool)
@@ -526,6 +647,7 @@ def predict_mhw_trend(request: MHWForecastRequest) -> MHWForecastResponse:
     end_date = date.today()
     provider = _HISTORY_PROVIDER or _default_provider
     history = provider(request.ocean_basin, end_date)
+    source_snapshot = _DATA_SOURCE
 
     mean = _META["mean"].reshape(1, N_VARS, 1, 1)
     std = _META["std"].reshape(1, N_VARS, 1, 1)
@@ -554,9 +676,11 @@ def predict_mhw_trend(request: MHWForecastRequest) -> MHWForecastResponse:
         "ci95_half_width": round(ci95_half_width, 3),
     }
 
-    # Basin-mean anomaly + day-by-day series blending persistence -> horizon
-    current_anom_map = history[-1, 0] - seasonal_climatology_sst(
-        lat_m, end_date.timetuple().tm_yday, request.ocean_basin
+    # Basin-mean anomaly + day-by-day series blending persistence -> horizon.
+    # Anomaly baseline: real multi-year archive climatology when live mode is
+    # active, per-cell fallback to the synthetic seasonal formula elsewhere.
+    current_anom_map = history[-1, 0] - _climatology_surface(
+        request.ocean_basin, lat_m, lon_m, end_date.timetuple().tm_yday
     )
     current_mean_anom = float(((current_anom_map[mask]) if mask else current_anom_map).mean())
 
@@ -568,7 +692,9 @@ def predict_mhw_trend(request: MHWForecastRequest) -> MHWForecastResponse:
         w = d / request.forecast_days
         day_anom = current_mean_anom * (1.0 - w) + horizon_mean_anom * w
         doy = (end_date + timedelta(days=d)).timetuple().tm_yday
-        clim_center = float(seasonal_climatology_sst(lat_m, doy, request.ocean_basin).mean())
+        clim_center = float(
+            _climatology_surface(request.ocean_basin, lat_m, lon_m, doy).mean()
+        )
         series.append(
             {
                 "date": (end_date + timedelta(days=d)).isoformat(),
@@ -608,4 +734,5 @@ def predict_mhw_trend(request: MHWForecastRequest) -> MHWForecastResponse:
             "method": "gaussian residual sigma x 1.96, sqrt(horizon)-scaled",
         },
         model_latency_ms=round(latency_ms, 2),
+        data_source=source_snapshot,
     )
