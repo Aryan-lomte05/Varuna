@@ -114,38 +114,104 @@ function FloatPopupMapModal({
       container: mapContainerRef.current,
       style: getVarunaMapStyle("dark"),
       center: [float.lon, float.lat],
-      zoom: 6.2,
-      pitch: 25,
+      zoom: 6.8,
+      pitch: 0,
       attributionControl: false,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
 
+    // 1. Create robust High-Visibility Tactical DOM Marker immediately
+    const el = document.createElement("div");
+    el.style.cssText = "position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 9999;";
+    el.innerHTML = `
+      <style>
+        @keyframes varunaBeaconPing {
+          0% { transform: scale(0.6); opacity: 0.9; }
+          70% { transform: scale(2.2); opacity: 0; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
+        @keyframes varunaBeaconPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.75; }
+        }
+      </style>
+      <div style="position: absolute; width: 50px; height: 50px; border-radius: 50%; background: rgba(0, 255, 198, 0.4); animation: varunaBeaconPing 2s infinite ease-out;"></div>
+      <div style="position: absolute; width: 28px; height: 28px; border-radius: 50%; background: rgba(46, 230, 198, 0.6); border: 2px solid #00FFC6; box-shadow: 0 0 18px #00FFC6; animation: varunaBeaconPulse 2s infinite ease-in-out;"></div>
+      <div style="position: relative; width: 14px; height: 14px; border-radius: 50%; background: #ffffff; border: 3px solid #00FFC6; box-shadow: 0 0 10px #ffffff;"></div>
+      <div style="position: absolute; top: 62px; left: 50%; transform: translateX(-50%); background: #051422; border: 1.5px solid #00FFC6; padding: 3px 8px; border-radius: 8px; color: #83FFE3; font-family: monospace; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.9); z-index: 10000; pointer-events: none;">
+        📍 WMO #${float.wmo} (${float.surfaceTemp.toFixed(1)}°C)
+      </div>
+    `;
+
+    const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+      .setLngLat([float.lon, float.lat])
+      .addTo(map);
+
+    markerRef.current = marker;
+
+    // 2. Also add WebGL GeoJSON fallback circle layer on map load
     map.on("load", () => {
-      // Create tactical pulsing radar beacon for this single float
-      const el = document.createElement("div");
-      el.className = "relative flex items-center justify-center cursor-pointer";
-      el.innerHTML = `
-        <div class="absolute w-20 h-20 rounded-full bg-[#00FFC6]/20 animate-ping"></div>
-        <div class="absolute w-12 h-12 rounded-full bg-[#2EE6C6]/40 animate-pulse"></div>
-        <div class="relative w-5 h-5 rounded-full bg-[#00FFC6] border-2 border-white shadow-[0_0_20px_#00FFC6] flex items-center justify-center text-[10px] font-black text-black">
-          ⚓
-        </div>
-        <div class="absolute -bottom-8 px-2.5 py-0.5 rounded-lg bg-[#051422]/95 border border-[#2EE6C6] text-[10px] font-mono font-black text-[#83FFE3] shadow-xl whitespace-nowrap">
-          WMO #${float.wmo} · ${float.surfaceTemp.toFixed(1)}°C
-        </div>
-      `;
+      map.resize();
+      
+      try {
+        map.addSource("solo-float-source", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: { type: "Point", coordinates: [float.lon, float.lat] },
+                properties: { title: `WMO #${float.wmo}` },
+              },
+            ],
+          },
+        });
 
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([float.lon, float.lat])
-        .addTo(map);
+        map.addLayer({
+          id: "solo-float-halo",
+          type: "circle",
+          source: "solo-float-source",
+          paint: {
+            "circle-radius": 24,
+            "circle-color": "rgba(0, 255, 198, 0.2)",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#00FFC6",
+          },
+        });
 
-      markerRef.current = marker;
+        map.addLayer({
+          id: "solo-float-core",
+          type: "circle",
+          source: "solo-float-source",
+          paint: {
+            "circle-radius": 7,
+            "circle-color": "#00FFC6",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+      } catch (e) {
+        console.warn("Could not add fallback WebGL layer", e);
+      }
     });
+
+    // Ensure map container size is accurately computed in modal
+    const t1 = setTimeout(() => {
+      map.resize();
+      map.setCenter([float.lon, float.lat]);
+    }, 120);
+
+    const t2 = setTimeout(() => {
+      map.resize();
+    }, 350);
 
     mapInstanceRef.current = map;
 
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
       markerRef.current?.remove();
       map.remove();
     };
