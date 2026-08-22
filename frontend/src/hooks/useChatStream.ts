@@ -148,20 +148,30 @@ export function useChatStream() {
             setMessages((prev) => {
               const last = prev[prev.length - 1];
               if (!last || last.role !== "assistant") return prev;
+
+              const existingMeta = last.metadata || {};
+              const mergedRows = (data?.rows && Array.isArray(data.rows) && data.rows.length > 0)
+                ? data.rows
+                : existingMeta.rows;
+              const mergedVizSpecs = (data?.viz_specs && Object.keys(data.viz_specs).length > 0)
+                ? data.viz_specs
+                : existingMeta.viz_specs;
+              const mergedSql = data?.sql || existingMeta.sql;
+
               return [
                 ...prev.slice(0, -1),
                 {
                   ...last,
                   content: data?.answer_markdown || last.content || "Analysis complete.",
                   isStreaming: false,
-                  trace_id: data?.trace_id,
+                  trace_id: data?.trace_id || last.trace_id,
                   metadata: {
-                    ...last.metadata,
-                    sql: data?.sql || last.metadata?.sql,
-                    rows: data?.rows || last.metadata?.rows,
-                    viz_specs: data?.viz_specs || last.metadata?.viz_specs,
-                    float_ids: data?.float_ids || last.metadata?.float_ids,
-                    intent: data?.intent || last.metadata?.intent,
+                    ...existingMeta,
+                    sql: mergedSql,
+                    rows: mergedRows,
+                    viz_specs: mergedVizSpecs,
+                    float_ids: data?.float_ids || existingMeta.float_ids,
+                    intent: data?.intent || existingMeta.intent,
                   },
                   agent_trace: data?.agent_trace || last.agent_trace,
                 },
