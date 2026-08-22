@@ -10,6 +10,7 @@ import {
   Radio,
   BarChart3,
   Globe2,
+  X,
 } from "lucide-react";
 import { ChatPanel } from "@/components/copilot/ChatPanel";
 import { MultiAgentExecutionPanel } from "@/features/agent-graph/MultiAgentExecutionPanel";
@@ -91,10 +92,19 @@ export function ChatbotView() {
           <VarunaMap onHoverCoords={setHoverCoords} />
 
           {/* Bottom Floating Map Summary */}
-          <div className="absolute bottom-3 left-3 z-20 hidden md:flex items-center gap-2 bg-[#0B1D2C]/90 px-3 py-1 rounded-full border border-white/10 backdrop-blur-md text-[10px] text-zinc-300 shadow-lg">
-            <Radio size={11} className="text-[#00FFC6]" />
-            <span>Active Target: <b className="text-white">#{selectedFloatId || "2902764"}</b></span>
-          </div>
+          {selectedFloatId && (
+            <div className="absolute bottom-3 left-3 z-20 hidden md:flex items-center gap-2 bg-[#0B1D2C]/90 px-3 py-1 rounded-full border border-white/10 backdrop-blur-md text-[10px] text-zinc-300 shadow-lg animate-in fade-in duration-150">
+              <Radio size={11} className="text-[#00FFC6]" />
+              <span>Active Target: <b className="text-white">#{selectedFloatId}</b></span>
+              <button
+                onClick={() => setSelectedFloatId("")}
+                className="ml-1 p-0.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-red-400 transition-colors"
+                title="Unpick float"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: Conversational AI Chatbot & Agent DAG (5 Cols on Desktop) */}

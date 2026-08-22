@@ -22,6 +22,7 @@ import {
   BarChart2,
   Eye,
   EyeOff,
+  X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -703,7 +704,7 @@ export function ChatPanel({
       {/* ── Input Box & Target Float Chip ───────────────────────────────── */}
       <div className="shrink-0 px-4 py-3 border-t border-white/5 bg-bg-2/40 space-y-2">
         {selectedFloatId && (
-          <div className="flex flex-wrap items-center justify-between text-[11px] font-mono bg-[#071A2D] px-2.5 py-1.5 rounded-lg border border-[#2EE6C6]/30 shadow-sm gap-2">
+          <div className="flex flex-wrap items-center justify-between text-[11px] font-mono bg-[#071A2D] px-2.5 py-1.5 rounded-lg border border-[#2EE6C6]/30 shadow-sm gap-2 animate-in fade-in duration-150">
             <div className="flex items-center gap-1.5 text-zinc-300">
               <span className="w-2 h-2 rounded-full bg-[#00FFC6] animate-pulse" />
               <span>Target Picked: <b className="text-[#00FFC6]">Float #{selectedFloatId}</b></span>
@@ -717,6 +718,7 @@ export function ChatPanel({
                   sendMessage(q);
                 }}
                 className="px-2 py-0.5 rounded bg-[#2EE6C6]/15 hover:bg-[#2EE6C6]/30 border border-[#2EE6C6]/40 text-[#83FFE3] text-[10px] transition-all cursor-pointer flex items-center gap-1"
+                title="Plot Vertical CTD Depth Profile"
               >
                 <BarChart2 size={10} />
                 <span>Depth Profile</span>
@@ -729,9 +731,24 @@ export function ChatPanel({
                   sendMessage(q);
                 }}
                 className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-[10px] transition-all cursor-pointer flex items-center gap-1"
+                title="Run Sensor Quality Diagnostics"
               >
                 <ShieldCheck size={10} />
                 <span>Sensor QC</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFloatId?.("");
+                  if (input.includes(`Float #${selectedFloatId}`) || input.includes(`float ${selectedFloatId}`)) {
+                    setInput("");
+                  }
+                }}
+                className="px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                title="Unpick and clear active target float"
+              >
+                <X size={10} />
+                <span>Unpick</span>
               </button>
             </div>
           </div>
