@@ -177,6 +177,36 @@ class ProfileConvAutoencoder(_BaseModule):  # type: ignore[misc]
         z = self.from_latent(z)
         return self.decoder(z.reshape(-1, 16, N_LEVELS // 4))
 
+    def parameters(self) -> Any:
+        if _HAS_TORCH and hasattr(super(), "parameters"):
+            return super().parameters()
+        return []
+
+    def train(self, mode: bool = True) -> Any:
+        if _HAS_TORCH and hasattr(super(), "train"):
+            return super().train(mode)
+        return self
+
+    def eval(self) -> Any:
+        if _HAS_TORCH and hasattr(super(), "eval"):
+            return super().eval()
+        return self
+
+    def state_dict(self) -> Dict[str, Any]:
+        if _HAS_TORCH and hasattr(super(), "state_dict"):
+            return super().state_dict()
+        return {}
+
+    def load_state_dict(self, state_dict: Dict[str, Any], strict: bool = True) -> Any:
+        if _HAS_TORCH and hasattr(super(), "load_state_dict"):
+            return super().load_state_dict(state_dict, strict=strict)
+        return None
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if _HAS_TORCH and hasattr(super(), "__call__"):
+            return super().__call__(*args, **kwargs)
+        return self.forward(*args, **kwargs)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Physics-informed synthetic profile generation
