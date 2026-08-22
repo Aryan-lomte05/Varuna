@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { OperationalProvider, useOperationalState } from "@/providers/OperationalProvider";
 import { GlobalHeader } from "@/components/layout/GlobalHeader";
 import { LeftNav } from "@/components/navigation/LeftNav";
-import { FloatingCommandDock } from "@/components/navigation/FloatingCommandDock";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { CopilotDrawer } from "@/components/copilot/CopilotDrawer";
 
@@ -63,9 +62,6 @@ function OperationsCommandCenter() {
           {renderActiveView()}
         </main>
       </div>
-
-      {/* ── 3. Floating Bottom Command Dock ───────────────────────────────── */}
-      <FloatingCommandDock />
 
       {/* ── 4. Global Search Palette (⌘ K) ─────────────────────────────────── */}
       <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
