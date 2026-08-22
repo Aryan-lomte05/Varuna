@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { getVarunaMapStyle } from "@/features/ocean-map/mapStyle";
 import {
   Radio,
   Search,
@@ -88,12 +91,156 @@ export const ALL_SUPABASE_FLOATS: DatabaseFloatRecord[] = [
   { wmo: 2902764, id: "ARGO-2902764", lat: 3.90, lon: 88.16, firstDate: "2022-01-01", latestDate: "2026-08-21", spanDays: 1693.0, cycles: 180, totalObs: 26153, minPres: 0.4, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.6, surfaceDoxy: 184.5, surfaceChla: 0.42, surfaceNitrate: 23.8, surfacePh: 8.04, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
 ];
 
+/**
+ * Tactical Pop-up Map Modal for Single Float Spatial Tracking
+ */
+function FloatPopupMapModal({
+  float,
+  onClose,
+  onOpenGlobalMap,
+}: {
+  float: DatabaseFloatRecord;
+  onClose: () => void;
+  onOpenGlobalMap: () => void;
+}) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: getVarunaMapStyle("dark"),
+      center: [float.lon, float.lat],
+      zoom: 6.2,
+      pitch: 25,
+      attributionControl: false,
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+
+    map.on("load", () => {
+      // Create tactical pulsing radar beacon for this single float
+      const el = document.createElement("div");
+      el.className = "relative flex items-center justify-center cursor-pointer";
+      el.innerHTML = `
+        <div class="absolute w-20 h-20 rounded-full bg-[#00FFC6]/20 animate-ping"></div>
+        <div class="absolute w-12 h-12 rounded-full bg-[#2EE6C6]/40 animate-pulse"></div>
+        <div class="relative w-5 h-5 rounded-full bg-[#00FFC6] border-2 border-white shadow-[0_0_20px_#00FFC6] flex items-center justify-center text-[10px] font-black text-black">
+          ⚓
+        </div>
+        <div class="absolute -bottom-8 px-2.5 py-0.5 rounded-lg bg-[#051422]/95 border border-[#2EE6C6] text-[10px] font-mono font-black text-[#83FFE3] shadow-xl whitespace-nowrap">
+          WMO #${float.wmo} · ${float.surfaceTemp.toFixed(1)}°C
+        </div>
+      `;
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([float.lon, float.lat])
+        .addTo(map);
+
+      markerRef.current = marker;
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      markerRef.current?.remove();
+      map.remove();
+    };
+  }, [float]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full h-[620px] bg-[#0B1D2C] border border-[#2EE6C6]/60 rounded-3xl overflow-hidden shadow-[0_0_70px_rgba(0,0,0,0.95)] flex flex-col font-mono relative animate-scale-in">
+        {/* Header */}
+        <div className="p-4 bg-[#071A2D] border-b border-white/10 flex items-center justify-between z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#2EE6C6]/20 border border-[#2EE6C6]/50 flex items-center justify-center shadow-[0_0_15px_rgba(46,230,198,0.3)]">
+              <MapPin size={18} className="text-[#00FFC6] animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                Live Spatial Tracking · Float #{float.wmo}
+                <span className="px-2 py-0.5 rounded text-[9px] bg-[#2EE6C6]/20 text-[#83FFE3] border border-[#2EE6C6]/40 font-bold">
+                  GPS: {float.lat.toFixed(3)}°N, {float.lon.toFixed(3)}°E
+                </span>
+              </h3>
+              <p className="text-[10px] text-[#809AAB]">
+                Indian Ocean Real-Time PostGIS Coordinate Resolution (public.v_latest_positions)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenGlobalMap}
+              className="px-3.5 py-1.5 rounded-xl bg-[#12212E] hover:bg-[#2EE6C6]/20 border border-[#2EE6C6]/40 text-[#83FFE3] text-xs font-bold transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+            >
+              <Compass size={14} />
+              <span>Open in Fleet Map</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Map Container */}
+        <div className="flex-1 relative w-full h-full">
+          <div ref={mapContainerRef} className="w-full h-full" />
+
+          {/* Floating Telemetry HUD Card on Map */}
+          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-84 p-4 rounded-2xl bg-[#051422]/90 backdrop-blur-lg border border-[#2EE6C6]/50 shadow-2xl space-y-2.5 text-xs">
+            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+              <span className="text-[11px] font-bold text-[#83FFE3] uppercase tracking-wider flex items-center gap-1.5">
+                <Activity size={13} className="text-[#00FFC6]" /> Float Telemetry HUD
+              </span>
+              <span className="text-[10px] text-zinc-400 italic truncate max-w-[120px]">{float.species}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <span className="text-zinc-500 block text-[9px] uppercase">SST Temperature</span>
+                <span className="font-bold text-[#2EE6C6]">{float.surfaceTemp.toFixed(1)}°C</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block text-[9px] uppercase">Salinity</span>
+                <span className="font-bold text-[#60A5FA]">{float.surfacePsal.toFixed(1)} PSU</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block text-[9px] uppercase">Dissolved O₂</span>
+                <span className="font-bold text-[#FFA500]">{float.surfaceDoxy.toFixed(0)} µM</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block text-[9px] uppercase">Depth Range</span>
+                <span className="font-bold text-white">0 → {float.maxPres.toFixed(0)} dbar</span>
+              </div>
+            </div>
+            <div className="pt-1.5 border-t border-white/10 text-[10px] text-zinc-400 flex items-center justify-between">
+              <span>{float.totalObs.toLocaleString()} Total Database Rows</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Signal Online
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function FloatsView() {
   const { selectedFloatId, setSelectedFloatId, setActiveNav, flyToCoordinates } = useOperationalState();
   const [currentWmo, setCurrentWmo] = useState<number>(4903660);
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [selectedDepthZoom, setSelectedDepthZoom] = useState<"full" | "photic" | "thermocline">("full");
   const [isExportStudioOpen, setIsExportStudioOpen] = useState(false);
+  const [isMapPopupOpen, setIsMapPopupOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
@@ -379,7 +526,7 @@ export function FloatsView() {
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
               <button
                 onClick={handlePrevFloat}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all"
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all cursor-pointer"
                 title="Previous Float"
               >
                 <ChevronLeft size={16} />
@@ -416,7 +563,7 @@ export function FloatsView() {
 
               <button
                 onClick={handleNextFloat}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all"
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-all cursor-pointer"
                 title="Next Float"
               >
                 <ChevronRight size={16} />
@@ -437,7 +584,7 @@ export function FloatsView() {
               <button
                 key={z.id}
                 onClick={() => setSelectedDepthZoom(z.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                   selectedDepthZoom === z.id
                     ? "bg-[#2EE6C6] text-black font-bold"
                     : "text-zinc-400 hover:text-white"
@@ -448,15 +595,12 @@ export function FloatsView() {
             ))}
           </div>
 
+          {/* 🌟 Track on Map: Opens dedicated Popup Map Modal */}
           <button
-            onClick={() => {
-              flyToCoordinates?.(activeFloat.lat, activeFloat.lon, 4.8);
-              setSelectedFloatId(String(activeFloat.wmo));
-              setActiveNav("OCEAN");
-            }}
+            onClick={() => setIsMapPopupOpen(true)}
             className="px-3.5 py-2 rounded-xl bg-[#12212E] hover:bg-[#2EE6C6]/20 border border-[#2EE6C6]/40 text-[#83FFE3] font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
           >
-            <MapPin size={14} />
+            <MapPin size={14} className="text-[#00FFC6]" />
             <span>Track on Map</span>
           </button>
 
@@ -787,6 +931,20 @@ export function FloatsView() {
         </div>
       </div>
 
+      {/* ── POP-UP INTERACTIVE MAP MODAL ──────────────────────────────────── */}
+      {isMapPopupOpen && (
+        <FloatPopupMapModal
+          float={activeFloat}
+          onClose={() => setIsMapPopupOpen(false)}
+          onOpenGlobalMap={() => {
+            setIsMapPopupOpen(false);
+            flyToCoordinates?.(activeFloat.lat, activeFloat.lon, 4.8);
+            setSelectedFloatId(String(activeFloat.wmo));
+            setActiveNav("OCEAN");
+          }}
+        />
+      )}
+
       {/* ── CUSTOMIZABLE SINGLE-FLOAT EXPORT STUDIO MODAL ─────────────────── */}
       {isExportStudioOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
@@ -808,7 +966,7 @@ export function FloatsView() {
               </div>
               <button
                 onClick={() => setIsExportStudioOpen(false)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -823,7 +981,7 @@ export function FloatsView() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <button
                   onClick={() => setExportScopeMode("all_obs")}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     exportScopeMode === "all_obs"
                       ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
                       : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
@@ -835,7 +993,7 @@ export function FloatsView() {
 
                 <button
                   onClick={() => setExportScopeMode("latest_cycle")}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     exportScopeMode === "latest_cycle"
                       ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
                       : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
@@ -847,7 +1005,7 @@ export function FloatsView() {
 
                 <button
                   onClick={() => setExportScopeMode("depth_sliced")}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     exportScopeMode === "depth_sliced"
                       ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
                       : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
@@ -948,7 +1106,7 @@ export function FloatsView() {
                   <button
                     key={fmt.id}
                     onClick={() => setExportFormat(fmt.id as any)}
-                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
                       exportFormat === fmt.id
                         ? "bg-[#2EE6C6] text-black font-bold border-[#2EE6C6] shadow-md"
                         : "bg-[#0E2435] text-zinc-300 border-white/5 hover:border-white/20"
@@ -975,7 +1133,7 @@ export function FloatsView() {
                     setCopiedSql(true);
                     setTimeout(() => setCopiedSql(false), 2000);
                   }}
-                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors cursor-pointer"
                 >
                   {copiedSql ? <Check size={12} className="text-[#00FFC6]" /> : <Copy size={12} />}
                   <span>{copiedSql ? "Copied" : "Copy SQL"}</span>
@@ -995,7 +1153,7 @@ export function FloatsView() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsExportStudioOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold transition-all"
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
