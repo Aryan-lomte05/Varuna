@@ -553,9 +553,12 @@ export function ChatPanel({
                     />
 
                     {/* Auto-suggested Plotly Visualization */}
-                    {m.metadata?.viz_specs && (
-                      <div className="mt-4 w-full h-[320px] rounded-xl overflow-hidden border border-white/10 bg-black/40">
-                        <ChartRouter vizSpecs={m.metadata.viz_specs} />
+                    {(m.metadata?.viz_specs || (m.metadata?.rows && m.metadata.rows.length > 0)) && (
+                      <div className="mt-4 w-full min-h-[340px] rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                        <ChartRouter
+                          vizSpecs={m.metadata.viz_specs}
+                          rows={m.metadata.rows}
+                        />
                       </div>
                     )}
 
