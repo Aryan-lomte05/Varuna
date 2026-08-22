@@ -1,6 +1,6 @@
 """
 FastAPI application factory for VARUNA — National Marine Data Backbone & Ocean Intelligence Platform.
-Fusing INCOIS ARGO Physical Oceanography (PS 25040) with CMLRE Living Resources (PS 25041).
+Fusing INCOIS ARGO Physical Oceanography with CMLRE Living Resources.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 
 from src.observability.logger import console
 
@@ -23,65 +23,38 @@ log = logging.getLogger("varuna.app")
 TAGS_METADATA = [
     {
         "name": "🤖 Multi-Agent Orchestration & AI Copilot",
-        "description": (
-            "Multi-Agent Task DAG execution engine powered by **NVIDIA Nemotron-Ultra 550B**. "
-            "Decomposes compound oceanographic questions into sub-agent graphs, resolves topological "
-            "dependencies in parallel, enforces strict SQL AST sanitization, and produces cited Markdown answers "
-            "with zero hallucination."
-        ),
+        "description": "Multi-agent Task DAG decomp, parallel SQL/RAG sub-agent execution, and provenance synthesis.",
     },
     {
-        "name": "🚨 Proactive Anomaly & Early-Warning Feed",
-        "description": (
-            "Autonomous statistical surveillance engine computing rolling 30-day baselines and **Hobday et al. (2016)** "
-            "Marine Heatwave $P_{90}$ threshold exceedance ($D \\ge 5\\text{ days}$) across 2°×2° Indian Ocean grid cells. "
-            "Flags severe hypoxia ($DOXY < 60\,\mu\text{mol/kg}$) and generates automated fisheries policy advisories."
-        ),
+        "name": "🚨 Autonomous Anomaly Detection & Early-Warning",
+        "description": "Real-time surveillance scanning for Marine Heatwaves (Hobday 2016) and Hypoxia events.",
     },
     {
-        "name": "🐟 CMLRE Marine Living Resources & Cross-Domain Fusion",
-        "description": (
-            "National Marine Data Backbone fusing **CMLRE Darwin Core** marine living resource occurrences "
-            "with in-situ physical float measurements via PostGIS spatio-temporal lateral joins "
-            "($\\Delta r \\le 50\\text{ km}, \\Delta t \\le 7\\text{ days}$). Tracks thermal tolerance envelopes and species displacement."
-        ),
+        "name": "🐟 Spatio-Temporal Bio-Oceanographic Fusion",
+        "description": "CMLRE taxonomy and INCOIS physical float data unified via PostGIS lateral correlation queries.",
     },
     {
-        "name": "🛰️ INCOIS ARGO Float Fleet & Depth Profiles",
-        "description": (
-            "Access 3,800+ active ARGO float platforms, 90-day surfacing drift trajectories, "
-            "and vertical CTD/BGC depth cast profiles ($T, S, \text{DOXY}, \text{CHLA}, \text{NITRATE}$ vs Depth $0-2000\\text{m}$)."
-        ),
+        "name": "🧠 Predictive ML & Quality Control",
+        "description": "LSTM Marine Heatwave forecasting (7/14 days) and deep 1D-CNN float profile QC autoencoding.",
     },
     {
-        "name": "🧠 Predictive ML & Deep Sensor QC",
-        "description": (
-            "Applied machine learning services: 7-day and 14-day spatio-temporal Marine Heatwave predictive forecasting "
-            "(ConvLSTM / Temporal ConvNet) and unsupervised 1D-CNN Autoencoder float sensor drift & biofouling detection."
-        ),
+        "name": "📊 Ocean Observations & Query Interface",
+        "description": "Physical in-situ profiles (ARGO), float trajectories, and sanitized PostGIS analytics.",
     },
     {
-        "name": "📊 Columnar Analytics & Dataset Export",
-        "description": (
-            "High-throughput zero-copy columnar data export powered by DuckDB and PyArrow in CSV and Apache Parquet formats."
-        ),
-    },
-    {
-        "name": "🔍 Pipeline Observability & RAG Debugger",
-        "description": (
-            "Comprehensive trace telemetry, sub-agent execution logs, user feedback collection, and system health status."
-        ),
+        "name": "⚙️ System Health & Provenance Telemetry",
+        "description": "Cluster diagnostics, vector database status, and distributed request trace inspection.",
     },
 ]
 
 APP_DESCRIPTION = """
-# 🌊 VARUNA — National Marine Data Backbone & Multi-Agent Ocean Intelligence API
+## 🌊 VARUNA — Multi-Agent Ocean Intelligence & Cognitive Data Backbone
 
-**VARUNA** fuses real-time physical/chemical oceanographic data from **INCOIS (PS 25040)** with marine living resources and taxonomic data from **CMLRE (PS 25041)** into a unified cognitive intelligence platform.
+**Team Ctrl Alt Defeat** | **Team ID: SIH26_19** | **Ministry of Earth Sciences (MoES)**
 
----
+VARUNA fuses **INCOIS physical ocean observations** (autonomous ARGO floats) with **CMLRE marine biodiversity records** into an AI-powered national ocean intelligence platform.
 
-### 🏛️ Core Architectural Highlights:
+### Key Capabilities
 * **🤖 Multi-Agent Task DAG**: Compound natural language prompts are compiled into dependency graphs executed across specialized sub-agents (`SQL_GEN`, `BIODIVERSITY`, `RETRIEVAL`, `SYNTHESIZER`) powered by **NVIDIA Nemotron-Ultra 550B** via OpenRouter.
 * **🚨 Proactive Early-Warning**: Autonomous statistical surveillance implementing **Hobday (2016)** Marine Heatwave math and Hypoxia Minimum Zone detection.
 * **🐟 Spatio-Temporal Bio-Fusion**: Sub-15ms PostGIS lateral joins correlating biological species observations with physical ARGO float profiles within $50\\text{km}$ and $7\\text{days}$.
@@ -96,7 +69,7 @@ APP_DESCRIPTION = """
 async def lifespan(app: FastAPI):
     console.rule("[bold cyan]🌊 VARUNA — Initializing National Marine Data Backbone[/bold cyan]")
 
-    log.info("Starting VARUNA API Server", env="production", version="2.0.0")
+    log.info("Starting VARUNA API Server (env=%s, version=%s)", "production", "2.0.0")
 
     # Initialize PostgreSQL tables & PostGIS extension
     try:
@@ -109,7 +82,7 @@ async def lifespan(app: FastAPI):
             postgres.init_anomaly_schema()
         log.info("PostgreSQL & PostGIS schemas initialized successfully")
     except Exception as e:
-        log.warning("Postgres initialization skipped or running in offline mode: %s", str(e))
+        log.warning("PostgreSQL initialization skipped or offline: %s", str(e))
 
     # Initialize Qdrant vector collections
     try:
@@ -133,7 +106,7 @@ app = FastAPI(
     description=APP_DESCRIPTION,
     version="2.0.0-PROD",
     openapi_tags=TAGS_METADATA,
-    default_response_class=ORJSONResponse,
+    default_response_class=JSONResponse,
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -171,7 +144,7 @@ app.add_api_websocket_route("/ws/chat", ws_chat)
 app.add_api_websocket_route("/api/ws/chat", ws_chat)
 
 
-@app.get("/health", tags=["🔍 Pipeline Observability & RAG Debugger"], summary="Comprehensive System Health Check")
+@app.get("/health", tags=["⚙️ System Health & Provenance Telemetry"], summary="Comprehensive System Health Check")
 async def health():
     """
     Returns live connectivity status for:
@@ -190,7 +163,7 @@ async def health():
             "autonomous_anomaly_scanner": "ACTIVE (6-hour loop)"
         },
         "supported_datasets": [
-            "INCOIS ARGO Float Profiles (PS 25040)",
-            "CMLRE Marine Living Resources Darwin Core (PS 25041)"
+            "INCOIS ARGO Float Profiles",
+            "CMLRE Marine Living Resources Darwin Core"
         ]
     }

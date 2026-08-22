@@ -1,34 +1,22 @@
 """
-FloatChat AI â€” Grounded Answer Generator
-
-WHY "grounded"?
-  Without grounding the LLM answers from its training data â€” which may be
-  outdated, wrong, or hallucinated. Grounded generation means: the LLM is
-  ONLY allowed to use the context we provide (retrieved chunks + SQL results).
-
-  We enforce this by:
-  1. Instructing: "Answer ONLY from the context below. If not in context, say so."
-  2. Injecting source annotations into context so it can cite them
-  3. Keeping temperature low (0.2) to reduce hallucination
-  4. Post-processing to strip any content that appears to be from outside context
+VARUNA — Grounded Answer Generator
+Grounded answer generation using OpenRouter Nemotron-Ultra 550B.
 """
+
 from __future__ import annotations
+
 from typing import Any, AsyncIterator, Dict, List, Optional
-from itertools import islice
+from src.llm.openrouter_client import chat_complete
+from src.rag.context_assembler import assemble_context
 
-from src.llm.ollama_client import stream_answer, narrate_results  # type: ignore
-from src.rag.context_assembler import assemble_context  # type: ignore
-
-
-_GROUNDED_SYSTEM = """You are FloatChat AI â€” a world-class ocean data assistant built for INCOIS marine scientists.
+GROUNDED_SYSTEM_PROMPT = """You are the Grounded Scientific Copilot for VARUNA (INCOIS & CMLRE).
 
 STRICT RULES:
-1. Answer ONLY using the provided context and SQL results below.
-2. If the context does not contain enough information, say "The available data doesn't cover this â€” try rephrasing or narrowing your query."
-3. Always include: key values with units (Â°C, PSU, Âµmol/kg, mg/mÂ³), time window, ocean region.
-4. When citing data points, cite the float ID and timestamp if available.
-5. Format response in clean markdown with headers where appropriate.
-6. Do NOT fabricate data values. Do NOT say "typically" or "generally" without citing context.
+1. Answer ONLY using the provided oceanographic context and SQL results below.
+2. If the context does not contain enough information, state what is missing clearly.
+3. Always include key values with units (°C, PSU, µmol/kg, mg/m³), time window, and ocean region.
+4. Format response in clean Markdown with headers.
+5. Do NOT hallucinate data values.
 """
 
 
@@ -41,73 +29,32 @@ async def generate_grounded_answer(
 ) -> str | AsyncIterator[str]:
     """
     Generate a grounded answer using retrieved context + SQL results.
-
-    Args:
-        question: original user question
-        context_chunks: ranked chunks from hybrid retriever
-        sql: SQL query that was run (shown in answer for transparency)
-        sql_rows: first N rows from SQL execution
-        stream: if True, returns async generator for WebSocket streaming
-
-    Returns:
-        str (stream=False) or AsyncIterator[str] (stream=True)
     """
-    # Build context string from chunks
-    context_str = assemble_context(context_chunks)
+    context_str, _ = assemble_context(context_chunks)
 
-    # Build SQL result preview
-    sql_preview = ""
+    prompt = f"Question: {question}\n\nContext:\n{context_str}"
+    if sql:
+        prompt += f"\n\nExecuted SQL:\n```sql\n{sql}\n```"
     if sql_rows:
-        preview_rows = list(islice(sql_rows, 5))
-        import json
-        sql_preview = f"\nSQL Result Preview:\n{json.dumps(preview_rows, default=str, indent=2)}"
+        prompt += f"\n\nSample Rows:\n{sql_rows[:5]}"
 
-    full_context = f"{context_str}{sql_preview}".strip()
+    messages = [
+        {"role": "system", "content": GROUNDED_SYSTEM_PROMPT},
+        {"role": "user", "content": prompt},
+    ]
 
-    if stream:
-        return stream_answer(question, full_context, sql=sql)
-    else:
-        # Use narrate for non-streaming (shorter, prose-style)
-        from src.utils.viz_builder import build_viz_specs  # type: ignore
-        rows_str = ""
-        if sql_rows:
-            import json
-            rows_str = json.dumps(list(islice(sql_rows, 8)), default=str, indent=2)
-        return await narrate_results(
-            question=question,
-            sql=sql or "(semantic search)",
-            rows_preview=rows_str or "".join(islice(full_context, 800)),
-        )
+    return await chat_complete(messages, temperature=0.1, task_tag="grounded_rag")
 
 
 async def generate_semantic_answer(
     question: str,
-    chunks_or_context: List[Dict[str, Any]] | str,
+    context: str,
 ) -> str:
     """
-    Pure RAG answer (no SQL) for conceptual/documentation questions.
-    E.g.: "What is the mixed layer depth?" or "How does upwelling work?"
+    Generate a pure semantic answer from retrieved ocean literature context.
     """
-    if isinstance(chunks_or_context, str):
-        context_str = chunks_or_context
-    else:
-        context_str = assemble_context(chunks_or_context, max_tokens=6000)
-    if not context_str:
-        return (
-            "Try asking about specific ocean variables, regions, or ARGO float data."
-        )
-
-    from src.llm.ollama_client import _chat  # type: ignore
-    from src.config import settings  # type: ignore
-
     messages = [
-        {"role": "system", "content": _GROUNDED_SYSTEM},
-        {
-            "role": "user",
-            "content": (
-                f"Question: {question}\n\n"
-                f"Context from knowledge base:\n{context_str}"
-            ),
-        },
+        {"role": "system", "content": GROUNDED_SYSTEM_PROMPT},
+        {"role": "user", "content": f"Question: {question}\n\nRetrieved Scientific Context:\n{context}"},
     ]
-    return await _chat(settings.ollama_narrate_model, messages, temperature=0.3, max_tokens=600)
+    return await chat_complete(messages, temperature=0.1, task_tag="semantic_rag")

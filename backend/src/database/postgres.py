@@ -100,9 +100,9 @@ def run_sql(sql: str, params: Optional[dict] = None, limit: int = 500) -> List[D
                 rows = cur.fetchall()
                 return [dict(r) for r in rows]
     except Exception:
-        # Fallback to DuckDB engine
-        from src.database.duckdb_client import query_parquet
+        # Fallback to DuckDB engine if available
         try:
+            from src.database.duckdb_client import query_parquet
             return query_parquet(s, limit=limit)
         except Exception:
             return []
@@ -324,4 +324,7 @@ def store_feedback(
                  json.dumps(pipeline_trace) if pipeline_trace else None),
             )
             conn.commit()
-            return cur.fetchone()["id"]
+            row = cur.fetchone()
+            if not row:
+                return 0
+            return int(row["id"] if isinstance(row, dict) else row[0])

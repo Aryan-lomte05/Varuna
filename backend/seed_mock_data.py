@@ -37,10 +37,13 @@ def seed():
     now = datetime.now()
 
     for loc in locations:
-        for i in range(loc["count"]):
+        count = int(loc["count"])
+        base_lat = float(loc["lat"])
+        base_lon = float(loc["lon"])
+        for i in range(count):
             p_id = random.choice(platforms)
-            lat = loc["lat"] + random.uniform(-0.5, 0.5)
-            lon = loc["lon"] + random.uniform(-0.5, 0.5)
+            lat = base_lat + random.uniform(-0.5, 0.5)
+            lon = base_lon + random.uniform(-0.5, 0.5)
             time = now - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))
 
             all_rows.append((

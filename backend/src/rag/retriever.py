@@ -189,14 +189,16 @@ class HybridRetriever:
 
         vector_results = []
         try:
-            vector_results = get_qdrant().search(
-                collection_name=settings.qdrant_collection,
-                query_vector=qvec,
-                limit=candidate_k,
-                query_filter=qdrant_filter,
-                with_payload=True,
-            )
-        except Exception as e:
+            client: Any = get_qdrant()
+            if hasattr(client, "search"):
+                vector_results = client.search(
+                    collection_name=settings.qdrant_collection,
+                    query_vector=qvec,
+                    limit=candidate_k,
+                    query_filter=qdrant_filter,
+                    with_payload=True,
+                )
+        except Exception:
             pass
 
         # ━━ Step 3: Reciprocal Rank Fusion (RRF) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -291,3 +293,14 @@ async def get_retriever() -> HybridRetriever:
         _retriever = HybridRetriever()
         await _retriever.initialize()
     return _retriever
+
+
+async def retrieve_hybrid(query: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    """Convenience helper for hybrid retrieval."""
+    try:
+        retriever = await get_retriever()
+        return await retriever.retrieve(query, top_k=top_k)
+    except Exception:
+        from src.database.qdrant import search_similar
+        return await search_similar(query, limit=top_k)
+

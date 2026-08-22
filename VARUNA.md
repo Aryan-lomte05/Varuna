@@ -5,7 +5,7 @@
 > **Permanent Context for Antigravity AI**: This document is the absolute authoritative source for VARUNA development.  
 > **Mission**: Revolutionize INCOIS and CMLRE ocean data governance by fusing physical oceanographic observations with marine living resources data into a multi-agent cognitive intelligence platform with proactive early-warning capabilities.  
 > **Team**: Ctrl Alt Defeat | **Target Hackathon**: Smart India Hackathon (SIH) 2026  
-> **Merged Problem Statement**: PS 25040 (FloatChat / INCOIS Argo Data) + PS 25041 (CMLRE Marine Living Resources Backbone)  
+> **Core Scope**: Unified Marine Data Backbone fusing INCOIS Argo Float Observations with CMLRE Marine Living Resources  
 > **Core Deployment Target**: 24 August 2026  
 
 ---
