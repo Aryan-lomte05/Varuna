@@ -20,6 +20,8 @@ import {
   Trash2,
   Radio,
   BarChart2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -138,6 +140,68 @@ function ProvenanceMarkdown({
       >
         {content}
       </ReactMarkdown>
+    </div>
+  );
+}
+
+// Expandable Interactive Visualization Drawer with Display / Hide Toggle
+function ExpandableChartDrawer({
+  vizSpecs,
+  rows,
+}: {
+  vizSpecs?: any;
+  rows?: any[];
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  if (!vizSpecs && (!rows || rows.length === 0)) return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-black/40 overflow-hidden shadow-lg transition-all">
+      {/* Header Bar with Display / Hide Toggle */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none border-b border-white/5 bg-[#0B1D2C]/70"
+      >
+        <div className="flex items-center gap-2">
+          <BarChart2 size={13} className="text-[#00FFC6]" />
+          <span className="text-[10px] font-mono font-bold text-[#00FFC6] uppercase tracking-wider">
+            Interactive Oceanographic Visualization
+          </span>
+          {rows && rows.length > 0 && (
+            <span className="text-[9px] font-mono text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded">
+              {rows.length} Points
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/5 hover:bg-[#00FFC6]/20 text-zinc-300 hover:text-[#00FFC6] transition-all border border-white/5"
+        >
+          {isOpen ? (
+            <>
+              <EyeOff size={11} className="text-[#FF6B6B]" />
+              <span>Hide Graph</span>
+            </>
+          ) : (
+            <>
+              <Eye size={11} className="text-[#00FFC6]" />
+              <span>Display Graph</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Collapsible Chart Body */}
+      {isOpen && (
+        <div className="p-2 w-full animate-in fade-in duration-200">
+          <ChartRouter vizSpecs={vizSpecs} rows={rows} />
+        </div>
+      )}
     </div>
   );
 }
@@ -552,9 +616,9 @@ export function ChatPanel({
                       onSelectFloat={onSelectFloat}
                     />
 
-                    {/* Auto-suggested Plotly Visualization */}
+                    {/* Auto-suggested Plotly Visualization with Display / Hide Toggle */}
                     {(m.metadata?.viz_specs || (m.metadata?.rows && m.metadata.rows.length > 0)) && (
-                      <ChartRouter
+                      <ExpandableChartDrawer
                         vizSpecs={m.metadata.viz_specs}
                         rows={m.metadata.rows}
                       />
