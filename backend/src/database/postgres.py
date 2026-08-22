@@ -69,7 +69,7 @@ def get_pool(db: str = "db2") -> Optional[Any]:
         if _pool_db1 is None:
             try:
                 dsn = getattr(settings, "pg_dsn_db1", settings.pg_dsn)
-                kwargs_dict = {"connect_timeout": 3}
+                kwargs_dict: Dict[str, Any] = {"connect_timeout": 3}
                 if psycopg and hasattr(psycopg, "rows"):
                     kwargs_dict["row_factory"] = psycopg.rows.dict_row
                 _pool_db1 = ConnectionPool(
@@ -92,15 +92,15 @@ def get_pool(db: str = "db2") -> Optional[Any]:
     if _pool_db2 is None:
         try:
             dsn = getattr(settings, "pg_dsn_db2", settings.pg_dsn)
-            kwargs_dict = {"connect_timeout": 3}
+            kwargs_dict2: Dict[str, Any] = {"connect_timeout": 3}
             if psycopg and hasattr(psycopg, "rows"):
-                kwargs_dict["row_factory"] = psycopg.rows.dict_row
+                kwargs_dict2["row_factory"] = psycopg.rows.dict_row
             _pool_db2 = ConnectionPool(
                 dsn,
                 min_size=1,
                 max_size=8,
                 timeout=2.0,
-                kwargs=kwargs_dict,
+                kwargs=kwargs_dict2,
             )
         except Exception as e:
             log.warning("DB2 pool initialization failed: %s", str(e))

@@ -204,22 +204,41 @@ async def run_single_query(item: Dict[str, str], idx: int, total: int) -> Dict[s
 
         rows_count = len(res.rows) if res.rows else 0
         has_citations = "[WMO:" in (res.answer_markdown or "") or "Row #" in (res.answer_markdown or "") or "float" in (res.answer_markdown or "").lower()
-        
-        print(f" -> Status: COMPLETED in {latency_sec:.2f}s | Rows: {rows_count} | Citations: {has_citations}")
+
+        # Distinguish between: data found vs. query ran but returned zero rows
+        if rows_count > 0:
+            exec_status = "SUCCESS_DATA"
+        else:
+            exec_status = "NO_DATA"  # SQL executed, but 0 rows matched filter
+
+        print(f" -> Status: {exec_status} in {latency_sec:.2f}s | Rows: {rows_count} | Citations: {has_citations}")
         if res.sql:
             print(f" -> SQL: {res.sql.strip().replace(chr(10), ' ')[:90]}...")
+
+        # Extract per-stage latencies from agent trace tasks
+        agent_latencies: Dict[str, Any] = {}
+        if res.agent_trace and hasattr(res.agent_trace, "tasks"):
+            for task in res.agent_trace.tasks:
+                lat = getattr(task, "latency_breakdown", {}) or {}
+                if getattr(task, "agent_type", "") == "SQL_GEN":
+                    agent_latencies["llm_nl2sql_ms"] = lat.get("llm_nl2sql_ms", 0.0)
+                    agent_latencies["db_execute_ms"] = lat.get("db_execute_ms", 0.0)
+                    agent_latencies["sql_sanitize_ms"] = lat.get("sql_sanitize_ms", 0.0)
+                    agent_latencies["sql_source"] = lat.get("sql_source", "unknown")
 
         return {
             "id": qid,
             "category": category,
             "query": query,
-            "status": "SUCCESS",
+            "status": exec_status,
+            "data_found": rows_count > 0,
             "latency_seconds": round(latency_sec, 2),
             "sql": res.sql or "",
             "rows_count": rows_count,
             "has_citations": has_citations,
             "answer_markdown": res.answer_markdown or "",
             "sample_rows": res.rows[:3] if res.rows else [],
+            "agent_latencies": agent_latencies,
             "trace": res.agent_trace.model_dump() if res.agent_trace else {}
         }
     except Exception as e:
@@ -250,18 +269,25 @@ def save_reports(results: List[Dict[str, Any]], total_time: float) -> None:
     md_path = os.path.join(artifacts_dir, "DEMO_EVALUATION_RESULTS.md")
 
     # 1. Write JSON Report
+    data_cnt = sum(1 for r in results if r["status"] == "SUCCESS_DATA")
+    no_data_cnt = sum(1 for r in results if r["status"] == "NO_DATA")
+    failed_cnt = sum(1 for r in results if r["status"] == "FAILED")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump({
             "timestamp": datetime.now().isoformat(),
             "total_queries": len(results),
             "total_execution_seconds": round(total_time, 2),
             "average_latency_seconds": round(sum(r["latency_seconds"] for r in results) / max(1, len(results)), 2),
-            "success_rate": f"{(sum(1 for r in results if r['status'] == 'SUCCESS') / max(1, len(results))) * 100:.1f}%",
+            "queries_with_data": data_cnt,
+            "queries_no_data": no_data_cnt,
+            "queries_failed": failed_cnt,
             "results": results
         }, f, indent=2, default=str)
 
-    # 2. Write Markdown Publication Report
-    success_count = sum(1 for r in results if r["status"] == "SUCCESS")
+    # Count queries that actually found data
+    data_count = sum(1 for r in results if r["status"] == "SUCCESS_DATA")
+    no_data_count = sum(1 for r in results if r["status"] == "NO_DATA")
+    failed_count = sum(1 for r in results if r["status"] == "FAILED")
     avg_latency = sum(r["latency_seconds"] for r in results) / max(1, len(results))
 
     md_lines = [
@@ -275,21 +301,46 @@ def save_reports(results: List[Dict[str, Any]], total_time: float) -> None:
         "| Metric | Value |",
         "| :--- | :--- |",
         f"| **Total Unique Queries** | `{len(results)}` |",
-        f"| **Successful Executions** | `{success_count}/{len(results)} ({success_count/max(1, len(results))*100:.1f}%)` |",
+        f"| **Queries With Data Found** | `{data_count}` |",
+        f"| **Queries Returning No Rows (NO_DATA)** | `{no_data_count}` |",
+        f"| **Failed Executions** | `{failed_count}` |",
         f"| **Total Benchmark Runtime** | `{total_time:.2f} seconds` |",
         f"| **Average Query Latency** | `{avg_latency:.2f} seconds` |",
         "",
         "---",
         "",
-        "## 2. Granular Query Results Matrix",
+        "## 2. Granular Query Results & Latency Breakdown Matrix",
         "",
-        "| ID | Category | Question | Latency | Rows | Status |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- |"
+        "| ID | Category | Question (truncated) | Total (s) | NL→SQL (ms) | DB Exec (ms) | Rows | SQL Source | Status |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
     ]
 
     for r in results:
+        alat = r.get("agent_latencies", {})
+        nl2sql_ms = alat.get("llm_nl2sql_ms", 0.0)
+        db_ms = alat.get("db_execute_ms", 0.0)
+        sql_src = alat.get("sql_source", "-")
+
+        # Extract duration_ms from trace tasks (the actual schema stores duration_ms per task)
+        sql_gen_ms = 0.0
+        synth_ms = 0.0
+        for task in r.get("trace", {}).get("tasks", []):
+            if task.get("agent_type") == "SQL_GEN":
+                sql_gen_ms = task.get("duration_ms", 0.0)
+                # latency_breakdown sub-keys if present
+                lb = task.get("latency_breakdown", {})
+                nl2sql_ms = lb.get("llm_nl2sql_ms", 0.0)
+                db_ms = lb.get("db_execute_ms", 0.0)
+            elif task.get("agent_type") == "SYNTHESIZER":
+                synth_ms = task.get("duration_ms", 0.0)
+
+        # If no granular breakdown, fall back to full sql_gen duration
+        if nl2sql_ms == 0.0 and sql_gen_ms > 0.0:
+            nl2sql_ms = sql_gen_ms
+
+        status_icon = "✅ DATA" if r["status"] == "SUCCESS_DATA" else ("🟡 NO_DATA" if r["status"] == "NO_DATA" else "❌ FAILED")
         md_lines.append(
-            f"| `{r['id']}` | **{r['category']}** | {r['query']} | `{r['latency_seconds']}s` | `{r['rows_count']}` | `{'✅ ' + r['status'] if r['status'] == 'SUCCESS' else '❌ FAILED'}` |"
+            f"| `{r['id']}` | **{r['category']}** | {r['query'][:70]}... | `{r['latency_seconds']}s` | `{nl2sql_ms:.0f}ms` | `{db_ms:.0f}ms` | `{r['rows_count']}` | `{sql_src}` | `{status_icon}` |"
         )
 
     md_lines.append("\n---\n\n## 3. Detailed Query Outputs & Grounded Scientific Syntheses\n")
@@ -297,7 +348,15 @@ def save_reports(results: List[Dict[str, Any]], total_time: float) -> None:
     for r in results:
         md_lines.append(f"### 🌊 [{r['id']}] {r['query']}")
         md_lines.append(f"- **Category**: {r['category']}")
-        md_lines.append(f"- **Latency**: `{r['latency_seconds']}s` | **Database Rows**: `{r['rows_count']}`")
+        md_lines.append(f"- **Total Latency**: `{r['latency_seconds']}s` | **Database Rows**: `{r['rows_count']}`")
+        
+        lb = r.get("trace", {}).get("latency_breakdown", {})
+        if lb:
+            md_lines.append("\n**Granular Execution Latency Breakdown:**")
+            md_lines.append("```json")
+            md_lines.append(json.dumps(lb, indent=2))
+            md_lines.append("```")
+
         if r.get("sql"):
             md_lines.append("\n**Executed PostgreSQL AST Query:**")
             md_lines.append(f"```sql\n{r['sql'].strip()}\n```")
@@ -309,7 +368,8 @@ def save_reports(results: List[Dict[str, Any]], total_time: float) -> None:
         f.write("\n".join(md_lines))
 
     print("\n" + "="*80)
-    print(f"✅ DEMONSTRATION COMPLETE: {success_count}/{len(results)} queries succeeded in {total_time:.2f}s (Avg: {avg_latency:.2f}s)")
+    print(f"✅ DEMONSTRATION COMPLETE: {data_count}/{len(results)} queries found data | {no_data_count} NO_DATA | {failed_count} FAILED")
+    print(f"⏱  Total: {total_time:.2f}s | Average: {avg_latency:.2f}s per query")
     print(f"📄 Markdown Report Saved: {md_path}")
     print(f"📦 JSON Artifact Saved:   {json_path}")
     print("="*80 + "\n")
