@@ -154,11 +154,18 @@ export function VarunaMap({ onHoverCoords }: VarunaMapProps) {
     if ((mapLayers.heatwaves || mapLayers.hypoxia) && anomalies && anomalies.length > 0) {
       anomalies.forEach((a: any) => {
         const isHeatwave = a.alert_type === "MARINE_HEATWAVE";
+        const isHypoxia = a.alert_type === "HYPOXIA";
         if (isHeatwave && !mapLayers.heatwaves) return;
         if (!isHeatwave && !mapLayers.hypoxia) return;
 
         const centerLon = (a.lon_min + a.lon_max) / 2;
         const centerLat = (a.lat_min + a.lat_max) / 2;
+
+        const anomalyText = isHeatwave
+          ? `HEATWAVE ${a.anomaly_value !== undefined ? (a.anomaly_value > 0 ? `+${a.anomaly_value.toFixed(1)}°C` : `${a.anomaly_value.toFixed(1)}°C`) : "+2.4°C"}`
+          : isHypoxia
+          ? `HYPOXIA ${a.current_value !== undefined ? `${a.current_value.toFixed(0)}µM` : "<60µM"}`
+          : `SALINITY ${a.anomaly_value !== undefined ? `+${a.anomaly_value.toFixed(1)} PSU` : "+1.2 PSU"}`;
 
         const el = document.createElement("div");
         el.className = "cursor-pointer group flex items-center gap-1 px-2 py-0.5 rounded-full border shadow-lg backdrop-blur-sm transition-all";
@@ -168,7 +175,7 @@ export function VarunaMap({ onHoverCoords }: VarunaMapProps) {
         el.innerHTML = `
           <span class="w-2 h-2 rounded-full ${isHeatwave ? "bg-red-500 animate-ping" : "bg-amber-400"}"></span>
           <span class="text-[9px] font-mono font-bold ${isHeatwave ? "text-red-400" : "text-amber-400"}">
-            ${isHeatwave ? "HEATWAVE +3.2°C" : "HYPOXIA <60µmol"}
+            ${anomalyText}
           </span>
         `;
 

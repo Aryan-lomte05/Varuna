@@ -80,7 +80,7 @@ export function EarlyWarningRoomPanel() {
           <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 z-10">
             <span className="flex items-center gap-1 text-white">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF4B4B] animate-ping" />
-              Arabian Sea MHW Thermal Anomaly
+              {activeAnomaly ? `${oceanBasin} ${activeAnomaly.alert_type === "MARINE_HEATWAVE" ? "Heatwave" : "Hypoxia"}` : "Arabian Sea MHW Thermal Anomaly"}
             </span>
             <span>Hobday (2016) P90</span>
           </div>
@@ -132,7 +132,7 @@ export function EarlyWarningRoomPanel() {
         <div className="col-span-5 bg-[#0E2435] rounded-lg border border-red-500/30 p-2.5 flex flex-col justify-between text-[10px] font-mono">
           <div>
             <div className="flex items-center justify-between text-[9px] mb-1">
-              <span className="text-[#FF4B4B] font-bold">Marine Heatwave</span>
+              <span className="text-[#FF4B4B] font-bold">{activeAnomaly?.alert_type ? activeAnomaly.alert_type.replace("_", " ") : "Marine Heatwave"}</span>
               <AlertTriangle size={11} className="text-[#FF4B4B]" />
             </div>
 
@@ -153,7 +153,7 @@ export function EarlyWarningRoomPanel() {
             <div className="space-y-0.5 pt-1 border-t border-white/5 text-[9px] text-zinc-400">
               <div className="flex justify-between">
                 <span>Severity</span>
-                <span className="text-[#FF4B4B] font-bold">CRITICAL</span>
+                <span className="text-[#FF4B4B] font-bold">{activeAnomaly?.severity || "CRITICAL"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Duration</span>
@@ -161,11 +161,11 @@ export function EarlyWarningRoomPanel() {
               </div>
               <div className="flex justify-between">
                 <span>Affected Area</span>
-                <span className="text-white font-bold">145,620 km²</span>
+                <span className="text-white font-bold">{activeAnomaly ? `${Math.round((activeAnomaly.lat_max - activeAnomaly.lat_min) * (activeAnomaly.lon_max - activeAnomaly.lon_min) * 111 * 111).toLocaleString()} km²` : "145,620 km²"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Affected Species</span>
-                <span className="text-[#2EE6C6] font-bold">12</span>
+                <span className="text-[#2EE6C6] font-bold">{activeAnomaly?.affected_species?.length || 12}</span>
               </div>
             </div>
           </div>
