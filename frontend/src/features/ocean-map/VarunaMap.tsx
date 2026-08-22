@@ -146,67 +146,10 @@ export function VarunaMap({ onHoverCoords }: VarunaMapProps) {
       });
     }
 
-    // 5. CLEAR OLD ALERT BADGES
+    // 5. CLEAR OLD ALERT BADGES (removed hardcoded tags)
     alertBadgesRef.current.forEach((m) => m.remove());
     alertBadgesRef.current = [];
-
-    // 6. RENDER ANOMALY BADGES & POLYGONS
-    if ((mapLayers.heatwaves || mapLayers.hypoxia) && anomalies && anomalies.length > 0) {
-      anomalies.forEach((a: any) => {
-        const isHeatwave = a.alert_type === "MARINE_HEATWAVE";
-        const isHypoxia = a.alert_type === "HYPOXIA";
-        if (isHeatwave && !mapLayers.heatwaves) return;
-        if (!isHeatwave && !mapLayers.hypoxia) return;
-
-        const centerLon = (a.lon_min + a.lon_max) / 2;
-        const centerLat = (a.lat_min + a.lat_max) / 2;
-
-        const anomalyText = isHeatwave
-          ? `HEATWAVE ${a.anomaly_value !== undefined ? (a.anomaly_value > 0 ? `+${a.anomaly_value.toFixed(1)}°C` : `${a.anomaly_value.toFixed(1)}°C`) : "+2.4°C"}`
-          : isHypoxia
-          ? `HYPOXIA ${a.current_value !== undefined ? `${a.current_value.toFixed(0)}µM` : "<60µM"}`
-          : `SALINITY ${a.anomaly_value !== undefined ? `+${a.anomaly_value.toFixed(1)} PSU` : "+1.2 PSU"}`;
-
-        const el = document.createElement("div");
-        el.className = "cursor-pointer group flex items-center gap-1 px-2 py-0.5 rounded-full border shadow-lg backdrop-blur-sm transition-all";
-        el.style.backgroundColor = isHeatwave ? "rgba(239, 68, 68, 0.25)" : "rgba(245, 158, 11, 0.25)";
-        el.style.borderColor = isHeatwave ? "#EF4444" : "#F59E0B";
-
-        el.innerHTML = `
-          <span class="w-2 h-2 rounded-full ${isHeatwave ? "bg-red-500 animate-ping" : "bg-amber-400"}"></span>
-          <span class="text-[9px] font-mono font-bold ${isHeatwave ? "text-red-400" : "text-amber-400"}">
-            ${anomalyText}
-          </span>
-        `;
-
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
-          setSelectedAlertId(a.id);
-        });
-
-        const badge = new maplibregl.Marker({ element: el, anchor: "center" })
-          .setLngLat([centerLon, centerLat])
-          .addTo(map);
-
-        alertBadgesRef.current.push(badge);
-      });
-
-      // Also push GeoJSON polygon footprints
-      try {
-        const src = map.getSource("anomalies") as maplibregl.GeoJSONSource | undefined;
-        if (src && typeof src.setData === "function") {
-          src.setData(anomaliesToGeoJSON(anomalies, selectedAlertId, mapLayers) as any);
-        }
-      } catch { /* style transition */ }
-    } else {
-      try {
-        const src = map.getSource("anomalies") as maplibregl.GeoJSONSource | undefined;
-        if (src && typeof src.setData === "function") {
-          src.setData({ type: "FeatureCollection", features: [] });
-        }
-      } catch { /* */ }
-    }
-  }, [floats, biodiversity, anomalies, mapLayers, selectedFloatId, selectedAlertId, setSelectedFloatId, setSelectedAlertId, setSelectedSpecies]);
+  }, [floats, biodiversity, mapLayers, selectedFloatId, setSelectedFloatId, setSelectedSpecies]);
 
   // ── Initialize MapLibre 2D Tactical Map ───────────────────────────────────
   useEffect(() => {
@@ -341,15 +284,11 @@ export function VarunaMap({ onHoverCoords }: VarunaMapProps) {
           <div className="hidden lg:flex items-center gap-2 bg-[#0B1D2C]/95 px-2.5 py-1 rounded-lg border border-white/10 backdrop-blur-md text-[9px] font-mono text-zinc-300 shadow-lg">
             <span className="flex items-center gap-1 text-[#00E5FF]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF]"></span>
-              {floats.length} ARGO
+              {floats.length} ARGO Floats
             </span>
             <span className="flex items-center gap-1 text-[#10B981]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
-              {biodiversity.length} Bio
-            </span>
-            <span className="flex items-center gap-1 text-[#EF4444]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span>
-              {anomalies.length} Alerts
+              {biodiversity.length} Bio Records
             </span>
           </div>
         </div>

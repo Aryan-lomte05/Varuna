@@ -59,13 +59,7 @@ export function CommandCenterView() {
               <div className="flex items-center gap-1">
                 <Radio size={12} className="text-[#2EE6C6]" />
                 <span className="font-bold text-white">{floatCount}</span>
-                <span className="text-[10px] text-[#809AAB]">Floats</span>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <AlertTriangle size={12} className="text-[#FF4B4B]" />
-                <span className="font-bold text-[#FF4B4B]">{activeAlertCount}</span>
-                <span className="text-[10px] text-[#809AAB]">Alerts</span>
+                <span className="text-[10px] text-[#809AAB]">Active Floats</span>
               </div>
 
               <div className="flex items-center gap-1 hidden sm:flex">
@@ -85,53 +79,6 @@ export function CommandCenterView() {
           {/* Interactive MapLibre 2D Operational Map */}
           <div className="relative flex-1 w-full h-full min-h-[340px] overflow-hidden">
             <VarunaMap />
-
-            {/* Floating Alert Cards on Right of Globe */}
-            <div className="absolute top-14 right-2.5 z-30 flex flex-col gap-2 max-w-[210px]">
-              {/* Critical MHW Alert */}
-              <div
-                onClick={() => {
-                  setSelectedAlertId(101);
-                  setActiveNav("ALERTS");
-                }}
-                className="p-2 rounded-lg bg-[#0B1D2C]/90 border border-[#FF4B4B]/40 shadow-[0_0_15px_rgba(255,75,75,0.15)] backdrop-blur-md cursor-pointer hover:border-[#FF4B4B] transition-all"
-              >
-                <div className="flex items-center justify-between text-[9px] font-mono mb-0.5">
-                  <span className="text-[#FF4B4B] font-bold uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF4B4B] animate-ping" />
-                    Critical Alert
-                  </span>
-                  <ChevronRight size={11} className="text-zinc-400" />
-                </div>
-                <div className="text-[11px] font-mono font-bold text-white">MARINE HEATWAVE</div>
-                <div className="text-[9px] font-mono text-[#809AAB]">Arabian Sea</div>
-                <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-                  <span className="text-[10px] font-mono font-bold text-[#FF4B4B]">+3.4°C</span>
-                  <span className="text-[8px] font-mono text-zinc-400">Severity: <b className="text-[#FF4B4B]">CRITICAL</b></span>
-                </div>
-              </div>
-
-              {/* Hypoxia Zone Card */}
-              <div
-                onClick={() => {
-                  setSelectedAlertId(103);
-                  setActiveNav("ALERTS");
-                }}
-                className="p-2 rounded-lg bg-[#0B1D2C]/90 border border-[#F59E0B]/40 shadow-[0_0_15px_rgba(245,158,11,0.15)] backdrop-blur-md cursor-pointer hover:border-[#F59E0B] transition-all"
-              >
-                <div className="text-[9px] font-mono font-bold text-[#F59E0B] uppercase tracking-wider">
-                  Hypoxia Zone
-                </div>
-                <div className="text-[11px] font-mono font-bold text-white">Bay of Bengal</div>
-                <div className="text-[9px] font-mono text-zinc-300 mt-0.5">
-                  DOXY &lt; 60 µmol/kg
-                </div>
-                <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5 text-[8px] font-mono">
-                  <span className="text-[#F59E0B] font-semibold">HIGH SEVERITY</span>
-                  <ArrowRight size={9} className="text-[#F59E0B]" />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Bottom Data Streams Status Bar */}

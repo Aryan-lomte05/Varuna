@@ -370,8 +370,8 @@ export function OperationalProvider({ children }: { children: React.ReactNode })
   const [mapLayers, setMapLayers] = useState<MapLayerState>({
     argoFloats: true,
     biodiversity: true,
-    heatwaves: true,
-    hypoxia: true,
+    heatwaves: false,
+    hypoxia: false,
     satellites: true,
     sensors: true,
     trajectories: true,
