@@ -60,14 +60,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
+class _BaseModule:
+    pass
+
 try:
     import torch  # type: ignore
     import torch.nn as nn  # type: ignore
     _HAS_TORCH = True
-    _Module: Any = nn.Module
+    _BaseModule = nn.Module  # type: ignore
 except ImportError:
     class _FakeNN:
-        Module = object
+        Module = _BaseModule
         Conv1d = GELU = Linear = Sequential = Upsample = SmoothL1Loss = lambda *a, **kw: None  # type: ignore
     class _FakeTorch:
         Tensor = object
@@ -85,7 +88,6 @@ except ImportError:
     torch = cast(Any, _FakeTorch())
     nn = cast(Any, _FakeNN())
     _HAS_TORCH = False
-    _Module = object
 from pydantic import BaseModel, Field
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -133,7 +135,7 @@ K_SIGMA: float = 3.0  # calibration rule: clean-mean + 3 std
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class ProfileConvAutoencoder(_Module):
+class ProfileConvAutoencoder(_BaseModule):  # type: ignore[misc]
     """1D-CNN encoder/decoder with a 4-float linear bottleneck."""
 
     def __init__(self, latent_dim: int = LATENT_DIM):

@@ -60,14 +60,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 
+class _BaseModule:
+    pass
+
 try:
     import torch  # type: ignore
     import torch.nn as nn  # type: ignore
     _HAS_TORCH = True
-    _Module: Any = nn.Module
+    _BaseModule = nn.Module  # type: ignore
 except ImportError:
     class _FakeNN:
-        Module = object
+        Module = _BaseModule
         ConstantPad1d = Conv1d = GroupNorm = GELU = Sequential = Conv2d = SmoothL1Loss = lambda *a, **kw: None  # type: ignore
     class _FakeTorch:
         Tensor = object
@@ -83,7 +86,6 @@ except ImportError:
     torch = cast(Any, _FakeTorch())
     nn = cast(Any, _FakeNN())
     _HAS_TORCH = False
-    _Module = object
 from pydantic import BaseModel, Field
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -311,7 +313,7 @@ def generate_synthetic_history(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class TemporalBlock(_Module):
+class TemporalBlock(_BaseModule):  # type: ignore[misc]
     def __init__(self, in_ch: int, out_ch: int, dilation: int):
         if not _HAS_TORCH:
             return
@@ -327,7 +329,7 @@ class TemporalBlock(_Module):
         return self.act(self.norm(self.conv(self.pad(x))))
 
 
-class SpatioTemporalTCN(_Module):
+class SpatioTemporalTCN(_BaseModule):  # type: ignore[misc]
     """
     Per-cell temporal encoder (dilated causal Conv1d over 30-day history)
     followed by a light spatial refinement head (3x3 convs over the grid).
