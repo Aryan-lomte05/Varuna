@@ -61,7 +61,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 import numpy as np
 
 class _BaseModule:
-    pass
+    def __init__(self, *args: Any, **kwargs: Any) -> None: pass
+    def parameters(self) -> Any: return []
+    def train(self, mode: bool = True) -> Any: return self
+    def eval(self) -> Any: return self
+    def state_dict(self) -> Dict[str, Any]: return {}
+    def load_state_dict(self, state_dict: Dict[str, Any], strict: bool = True) -> Any: return None
+    def __call__(self, *args: Any, **kwargs: Any) -> Any: return None
+    def forward(self, *args: Any, **kwargs: Any) -> Any: return None
 
 try:
     import torch  # type: ignore
@@ -486,7 +493,7 @@ def train_model(
 # ─────────────────────────────────────────────────────────────────────────────
 
 _LOCK = threading.Lock()
-_MODEL: Optional[SpatioTemporalTCN] = None
+_MODEL: Optional[Any] = None
 _META: Dict[str, Any] = {}
 _HISTORY_PROVIDER: Optional[
     Callable[[str, date], np.ndarray]
