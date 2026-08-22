@@ -177,44 +177,57 @@ def generate_fallback_sql(question: str) -> str:
             "ORDER BY time DESC LIMIT 20;"
         )
 
-    # ── 7. Coastal Proximity Queries (Mumbai, Kochi, Chennai) ────────────────
-    if "mumbai" in q or "18.95" in q:
-        # Strict distance-constrained CTE — only returns floats within 300 km
-        return (
-            "WITH haversine AS ( "
-            "  SELECT platform_number, time, latitude, longitude, pres, temp, psal, "
-            "         6371.0 * acos(LEAST(1.0, GREATEST(-1.0, "
-            "             sin(radians(18.95)) * sin(radians(latitude)) + "
-            "             cos(radians(18.95)) * cos(radians(latitude)) * cos(radians(longitude) - radians(72.83)) "
-            "         ))) AS dist_km "
-            "  FROM public.marine_data "
-            "  WHERE latitude BETWEEN 15.0 AND 23.0 AND longitude BETWEEN 68.0 AND 77.0 AND pres <= 20 "
-            ") "
-            "SELECT * FROM haversine WHERE dist_km <= 300.0 ORDER BY dist_km ASC, time DESC LIMIT 10;"
-        )
+    # ── 7. Coastal Proximity Queries (Mumbai, Kochi, Chennai, Nearest Shore) ──
+    if (
+        "nearest" in q
+        or "closest" in q
+        or "shore" in q
+        or "coast" in q
+        or "near me" in q
+        or "my shore" in q
+        or "proximity" in q
+        or "mumbai" in q
+        or "18.95" in q
+        or "chennai" in q
+        or "13.08" in q
+        or "kochi" in q
+    ):
+        if "chennai" in q or "13.08" in q:
+            ref_lat, ref_lon, max_dist = 13.08, 80.27, 500.0
+            lat_min, lat_max, lon_min, lon_max = 9.0, 17.0, 77.0, 85.0
+        elif "kochi" in q or "malabar" in q or "kerala" in q:
+            ref_lat, ref_lon, max_dist = 9.93, 76.26, 400.0
+            lat_min, lat_max, lon_min, lon_max = 7.0, 14.0, 72.0, 79.0
+        elif "mumbai" in q or "18.95" in q:
+            ref_lat, ref_lon, max_dist = 18.95, 72.83, 300.0
+            lat_min, lat_max, lon_min, lon_max = 15.0, 23.0, 68.0, 77.0
+        else:
+            # General Indian Coastline / Western Shore centroid reference (15.5°N, 73.8°E)
+            ref_lat, ref_lon, max_dist = 15.5, 73.8, 800.0
+            lat_min, lat_max, lon_min, lon_max = 5.0, 25.0, 55.0, 85.0
 
-    if "kochi" in q or "malabar" in q or "sardine" in q or "sardinella" in q:
         return (
-            "SELECT platform_number, time, latitude, longitude, pres, temp, psal, doxy "
-            "FROM public.marine_data "
-            "WHERE latitude BETWEEN 8.0 AND 15.0 AND longitude BETWEEN 72.0 AND 77.0 "
-            "  AND pres <= 20 AND temp IS NOT NULL "
-            "ORDER BY time DESC LIMIT 20;"
-        )
-
-    if "chennai" in q or "13.08" in q:
-        # Strict distance-constrained CTE — only returns floats within 500 km of Chennai
-        return (
-            "WITH haversine AS ( "
-            "  SELECT platform_number, time, latitude, longitude, pres, temp, psal, "
-            "         6371.0 * acos(LEAST(1.0, GREATEST(-1.0, "
-            "             sin(radians(13.08)) * sin(radians(latitude)) + "
-            "             cos(radians(13.08)) * cos(radians(latitude)) * cos(radians(longitude) - radians(80.27)) "
-            "         ))) AS dist_km "
+            "WITH latest_surface AS ( "
+            "  SELECT DISTINCT ON (platform_number) "
+            "         platform_number, time, latitude, longitude, pres, temp, psal, doxy "
             "  FROM public.marine_data "
-            "  WHERE latitude BETWEEN 9.0 AND 17.0 AND longitude BETWEEN 77.0 AND 85.0 AND pres <= 20 "
+            f"  WHERE latitude BETWEEN {lat_min} AND {lat_max} "
+            f"    AND longitude BETWEEN {lon_min} AND {lon_max} "
+            "    AND pres <= 20 AND temp IS NOT NULL "
+            "  ORDER BY platform_number, time DESC "
+            "), "
+            "haversine AS ( "
+            "  SELECT platform_number, time, latitude, longitude, pres, temp, psal, doxy, "
+            "         6371.0 * acos(LEAST(1.0, GREATEST(-1.0, "
+            f"             sin(radians({ref_lat})) * sin(radians(latitude)) + "
+            f"             cos(radians({ref_lat})) * cos(radians(latitude)) * cos(radians(longitude) - radians({ref_lon})) "
+            "         ))) AS dist_km "
+            "  FROM latest_surface "
             ") "
-            "SELECT * FROM haversine WHERE dist_km <= 500.0 ORDER BY dist_km ASC, time DESC LIMIT 10;"
+            f"SELECT platform_number, time, latitude, longitude, dist_km, temp, psal, doxy "
+            f"FROM haversine "
+            f"WHERE dist_km <= {max_dist} "
+            "ORDER BY dist_km ASC LIMIT 10;"
         )
 
     # ── 8. CMLRE Living Resources / Tuna ─────────────────────────────────────
