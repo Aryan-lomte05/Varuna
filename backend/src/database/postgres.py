@@ -20,7 +20,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Set
 
 log = logging.getLogger("varuna.postgres")
 
@@ -31,8 +31,11 @@ try:
     _has_psycopg = True
 except ImportError:
     psycopg = None  # type: ignore
-    ConnectionPool = Any  # type: ignore
+    ConnectionPool = None  # type: ignore
     _has_psycopg = False
+
+if TYPE_CHECKING:
+    from psycopg_pool import ConnectionPool  # type: ignore
 
 from src.config import settings  # type: ignore
 
@@ -46,18 +49,18 @@ MOCK_FLOATS = [
 ]
 
 # ── Dual Connection Pools ──────────────────────────────────────────────────────
-_pool_db1: Optional[ConnectionPool] = None
-_pool_db2: Optional[ConnectionPool] = None
+_pool_db1: Optional[Any] = None
+_pool_db2: Optional[Any] = None
 _db1_available: bool = True
 _db2_available: bool = True
 
 CUTOFF_DATE = datetime(2025, 8, 1, 0, 0, 0)
 
 
-def get_pool(db: str = "db2") -> Optional[ConnectionPool]:
+def get_pool(db: str = "db2") -> Optional[Any]:
     """Retrieve connection pool for DB1 (historical) or DB2 (recent)."""
     global _pool_db1, _pool_db2, _db1_available, _db2_available
-    if not _has_psycopg:
+    if not _has_psycopg or ConnectionPool is None:
         return None
     if db == "db1":
         if not _db1_available:
@@ -65,12 +68,15 @@ def get_pool(db: str = "db2") -> Optional[ConnectionPool]:
         if _pool_db1 is None:
             try:
                 dsn = getattr(settings, "pg_dsn_db1", settings.pg_dsn)
+                kwargs_dict: Dict[str, Any] = {"connect_timeout": 3}
+                if psycopg and hasattr(psycopg, "rows"):
+                    kwargs_dict["row_factory"] = psycopg.rows.dict_row
                 _pool_db1 = ConnectionPool(
                     dsn,
                     min_size=1,
                     max_size=8,
                     timeout=2.0,
-                    kwargs={"row_factory": psycopg.rows.dict_row, "connect_timeout": 3},
+                    kwargs=kwargs_dict,
                 )
             except Exception as e:
                 log.warning("DB1 pool initialization failed: %s", str(e))
@@ -85,12 +91,15 @@ def get_pool(db: str = "db2") -> Optional[ConnectionPool]:
     if _pool_db2 is None:
         try:
             dsn = getattr(settings, "pg_dsn_db2", settings.pg_dsn)
+            kwargs_dict2: Dict[str, Any] = {"connect_timeout": 3}
+            if psycopg and hasattr(psycopg, "rows"):
+                kwargs_dict2["row_factory"] = psycopg.rows.dict_row
             _pool_db2 = ConnectionPool(
                 dsn,
                 min_size=1,
                 max_size=8,
                 timeout=2.0,
-                kwargs={"row_factory": psycopg.rows.dict_row, "connect_timeout": 3},
+                kwargs=kwargs_dict2,
             )
         except Exception as e:
             log.warning("DB2 pool initialization failed: %s", str(e))
@@ -192,7 +201,7 @@ def _execute_single_db(db_name: str, sql: str, params: Optional[dict] = None) ->
     try:
         with _conn(db_name) as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, params or {})
+                cur.execute(sql, params or {})  # type: ignore[arg-type]
                 rows = cur.fetchall()
                 return [dict(r) for r in rows]
     except Exception as e:
@@ -210,7 +219,7 @@ def run_sql(sql: str, params: Optional[dict] = None, limit: int = 500) -> List[D
     if not s.lower().lstrip().startswith("select") and not s.lower().lstrip().startswith("with"):
         raise ValueError("Only SELECT statements are allowed.")
     if "limit" not in s.lower():
-        s = f"{s} LIMIT {int(limit)}"
+        s = f"{s} LIMIT {limit}"
 
     target_dbs = route_query(s)
 
@@ -312,7 +321,7 @@ def float_trajectory(
     sql = f"""
     SELECT platform_number, time, latitude, longitude, temp, psal, doxy
     FROM public.marine_data
-    WHERE platform_number = {int(platform_number)}
+    WHERE platform_number = {platform_number}
       AND pres < 25
     ORDER BY time ASC
     LIMIT 300
@@ -382,11 +391,11 @@ def depth_profile(
     radius_deg: float = 0.05,
 ) -> List[Dict[str, Any]]:
     """Get full vertical depth profile (0-2000m) for a float observation."""
-    conditions = [f"platform_number = {int(platform_number)}"]
+    conditions = [f"platform_number = {platform_number}"]
     params: dict = {}
 
     if cycle_number is not None:
-        conditions.append(f"cycle_number = {int(cycle_number)}")
+        conditions.append(f"cycle_number = {cycle_number}")
 
     if lat is not None and lon is not None:
         conditions.append(f"ABS(latitude - {lat}) < {radius_deg} AND ABS(longitude - {lon}) < {radius_deg}")
@@ -438,7 +447,7 @@ def regional_stats(
     FROM public.marine_data
     WHERE {bounds}
       AND {safe_var} IS NOT NULL
-      AND time >= CURRENT_TIMESTAMP - INTERVAL '{int(days)} days'
+      AND time >= CURRENT_TIMESTAMP - INTERVAL '{days} days'
     """
     rows = run_sql(sql, limit=1)
     if rows and rows[0].get("obs_count"):

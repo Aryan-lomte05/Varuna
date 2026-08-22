@@ -79,46 +79,57 @@ async def execute_sql_task(
 ) -> Dict[str, Any]:
     """
     Translates task description to SQL, sanitizes the query, and executes against the database.
+    Returns results with granular per-phase latency breakdown.
     """
-    prompt = f"Generate SQL query for: {task_desc}"
-    if params and "query" in params and params["query"].upper().startswith("SELECT"):
-        sql_candidate = params["query"]
-    else:
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
-        raw_output = await chat_complete(messages, temperature=0.0, task_tag="sql_gen", trace=trace)
-        sql_candidate = extract_sql(raw_output)
+    import time as _time
 
-    # Enforce strict AST validation
+    latency = {}
+
+    # ALWAYS generate SQL from the natural language task description.
+    # Never accept pre-built SQL from upstream plan params — the SQL_GEN agent
+    # is responsible for translating NL → SQL via LLM or rule-based fallback.
+    prompt = f"Generate SQL query for: {task_desc}"
+    t_llm = _time.perf_counter()
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": prompt},
+    ]
+    raw_output = await chat_complete(messages, temperature=0.0, task_tag="sql_gen", trace=trace)
+    latency["llm_nl2sql_ms"] = round((_time.perf_counter() - t_llm) * 1000.0, 1)
+    sql_candidate = extract_sql(raw_output)
+
+    # Enforce strict AST validation; fall back to rule-based SQL if LLM output is bad
+    t_san = _time.perf_counter()
+    from src.llm.sql_gen import generate_fallback_sql
     try:
-        clean_sql = sanitize_sql(sql_candidate or "")
+        if not sql_candidate or "SELECT" not in sql_candidate.upper():
+            clean_sql = generate_fallback_sql(task_desc)
+            latency["sql_source"] = "rule_engine"
+        else:
+            clean_sql = sanitize_sql(sql_candidate)
+            latency["sql_source"] = "llm"
     except Exception as e:
-        log.warning("SQL Sanitization failed, applying fallback query: %s", str(e))
-        clean_sql = (
-            "SELECT DATE_TRUNC('month', time) AS month, AVG(temp) AS avg_temp, AVG(doxy) AS avg_doxy "
-            "FROM public.marine_data WHERE time >= NOW() - INTERVAL '6 months' "
-            "GROUP BY 1 ORDER BY 1 ASC LIMIT 50;"
-        )
+        log.warning("SQL Sanitization failed, applying dynamic precision fallback: %s", str(e))
+        clean_sql = generate_fallback_sql(task_desc)
+        latency["sql_source"] = "rule_engine_fallback"
+    latency["sql_sanitize_ms"] = round((_time.perf_counter() - t_san) * 1000.0, 1)
 
     # Execute against database pool
+    t_db = _time.perf_counter()
     rows = run_sql(clean_sql, limit=200)
+    latency["db_execute_ms"] = round((_time.perf_counter() - t_db) * 1000.0, 1)
 
-    # Fallback simulation for offline testing
+    # If DB returns no rows, report it honestly — do NOT inject fabricated data
     if not rows:
-        rows = [
-            {"month": "2026-03-01", "avg_temp": 28.45, "avg_doxy": 52.1, "platform_number": 1902303},
-            {"month": "2026-04-01", "avg_temp": 29.14, "avg_doxy": 42.1, "platform_number": 1902303},
-            {"month": "2026-05-01", "avg_temp": 30.22, "avg_doxy": 38.6, "platform_number": 1902303},
-            {"month": "2026-06-01", "avg_temp": 29.80, "avg_doxy": 44.0, "platform_number": 2901742},
-            {"month": "2026-07-01", "avg_temp": 28.90, "avg_doxy": 48.3, "platform_number": 2901742},
-            {"month": "2026-08-01", "avg_temp": 29.14, "avg_doxy": 42.1, "platform_number": 2901742},
-        ]
+        log.info("SQL query returned 0 rows for: %s", task_desc[:80])
+        rows = []
 
     return {
         "sql": clean_sql,
         "rows": rows,
         "row_count": len(rows),
         "columns": list(rows[0].keys()) if rows else [],
+        "status": "NO_DATA" if not rows else "OK",
+        "latency": latency,
     }
+
