@@ -1,0 +1,20 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "backend",
+      "extraPaths": [
+        "backend",
+        "backend/src",
+        "backend/venv/Lib/site-packages",
+        "C:/Users/Aryan/AppData/Roaming/Python/Python313/site-packages"
+      ]
+    }
+  ],
+  "extraPaths": [
+    "backend",
+    "backend/src",
+    "backend/venv/Lib/site-packages",
+    "C:/Users/Aryan/AppData/Roaming/Python/Python313/site-packages"
+  ],
+  "reportMissingImports": "none"
+}

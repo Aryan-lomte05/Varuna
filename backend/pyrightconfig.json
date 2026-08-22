@@ -1,0 +1,14 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ],
+  "extraPaths": [
+    ".",
+    "src",
+    "C:/Users/Aryan/AppData/Roaming/Python/Python313/site-packages"
+  ],
+  "reportMissingImports": "none"
+}
+
