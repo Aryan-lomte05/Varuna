@@ -17,10 +17,18 @@ class Settings(BaseSettings):
     )
     log_level: str = Field("DEBUG", alias="FLOATCHAT_LOG_LEVEL")
 
-    # ── PostgreSQL ─────────────────────────────────────
+    # ── PostgreSQL (Dual Supabase Sharded Connection Pools) ──
     pg_dsn: str = Field(
-        "postgresql://argo_admin:argo_password@localhost:5432/argo_data",
+        "postgresql://postgres.skbxtnjcvutzgkzgrrxr:HelloWorldIsSoLame@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres",
         alias="PG_DSN",
+    )
+    pg_dsn_db1: str = Field(
+        "postgresql://postgres.anpvaxwncqsxetujkqce:HelloWorldIsSoLame@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres",
+        alias="PG_DSN_DB1",
+    )
+    pg_dsn_db2: str = Field(
+        "postgresql://postgres.skbxtnjcvutzgkzgrrxr:HelloWorldIsSoLame@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres",
+        alias="PG_DSN_DB2",
     )
 
     # ── Qdrant ─────────────────────────────────────────
