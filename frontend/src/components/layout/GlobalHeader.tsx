@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Globe, Activity, Clock, ShieldCheck, ChevronDown, Radio, Sparkles } from "lucide-react";
+import { Search, Globe, Activity, Clock, ShieldCheck, ChevronDown, Radio, Sparkles, Bot } from "lucide-react";
 import { useOperationalState } from "@/providers/OperationalProvider";
 
 interface GlobalHeaderProps {
@@ -80,7 +80,7 @@ export function GlobalHeader({ onOpenSearch }: GlobalHeaderProps) {
 
       {/* ── Right Telemetry & Status ──────────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        {/* Ask Copilot Quick Button */}
+        {/* Ask Chatbot Quick Button */}
         <button
           onClick={() => setCopilotOpen(!copilotOpen)}
           className={`h-8 px-3 rounded-lg border text-xs font-mono font-semibold flex items-center gap-1.5 transition-all ${
@@ -89,8 +89,8 @@ export function GlobalHeader({ onOpenSearch }: GlobalHeaderProps) {
               : "bg-[#0B1D2C] text-[#2EE6C6] border-[#2EE6C6]/30 hover:border-[#2EE6C6] hover:bg-[#2EE6C6]/10"
           }`}
         >
-          <Sparkles size={12} className={copilotOpen ? "animate-spin" : ""} />
-          <span>COPILOT</span>
+          <Bot size={13} className={copilotOpen ? "animate-bounce" : ""} />
+          <span>CHATBOT</span>
         </button>
 
         {/* UTC Clock */}

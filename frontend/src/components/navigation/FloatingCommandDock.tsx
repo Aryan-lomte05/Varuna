@@ -7,7 +7,7 @@ import {
   Database,
   AlertTriangle,
   Fish,
-  Sparkles,
+  Bot,
   Layers,
 } from "lucide-react";
 import { useOperationalState, NavItem } from "@/providers/OperationalProvider";
@@ -47,17 +47,19 @@ export function FloatingCommandDock() {
 
       <div className="w-[1px] h-5 bg-white/10 mx-0.5" />
 
-      {/* Floating Copilot Toggle */}
+      {/* Floating Chatbot Toggle */}
       <button
-        onClick={() => setCopilotOpen(!copilotOpen)}
+        onClick={() => {
+          setActiveNav("COPILOT");
+        }}
         className={`px-3.5 py-1.5 rounded-full text-xs font-mono flex items-center gap-1.5 transition-all ${
-          copilotOpen
+          activeNav === "COPILOT"
             ? "bg-[#00FFC6] text-black font-bold shadow-[0_0_15px_#00FFC6]"
             : "bg-[#0B1D2C] text-[#00FFC6] border border-[#00FFC6]/40 hover:bg-[#00FFC6]/20"
         }`}
       >
-        <Sparkles size={13} />
-        <span className="font-bold">Copilot</span>
+        <Bot size={14} />
+        <span className="font-bold">Chatbot</span>
       </button>
     </div>
   );

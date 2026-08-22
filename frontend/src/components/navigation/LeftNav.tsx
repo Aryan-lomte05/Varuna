@@ -10,7 +10,7 @@ import {
   BarChart3,
   TrendingUp,
   Database,
-  Sparkles,
+  Bot,
   ChevronRight,
   User,
 } from "lucide-react";
@@ -33,7 +33,7 @@ const NAV_ITEMS: NavConfigItem[] = [
   { id: "ANALYTICS", label: "Analytics", icon: BarChart3 },
   { id: "FORECASTS", label: "Forecasts", icon: TrendingUp },
   { id: "DATASETS", label: "Datasets", icon: Database },
-  { id: "COPILOT", label: "Copilot", icon: Sparkles },
+  { id: "COPILOT", label: "Chatbot", icon: Bot },
 ];
 
 export function LeftNav() {
