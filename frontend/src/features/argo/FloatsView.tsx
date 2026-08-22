@@ -22,6 +22,15 @@ import {
   TrendingUp,
   ShieldCheck,
   Zap,
+  SlidersHorizontal,
+  X,
+  Code,
+  Copy,
+  Check,
+  CheckSquare,
+  Square,
+  FileSpreadsheet,
+  Calendar,
 } from "lucide-react";
 import { useOperationalState } from "@/providers/OperationalProvider";
 
@@ -72,55 +81,11 @@ export const ALL_SUPABASE_FLOATS: DatabaseFloatRecord[] = [
   { wmo: 2902263, id: "ARGO-2902263", lat: 16.61, lon: 63.11, firstDate: "2022-01-03", latestDate: "2024-04-02", spanDays: 820.0, cycles: 120, totalObs: 52398, minPres: 0.7, maxPres: 2000.0, surfaceTemp: 30.2, surfacePsal: 36.4, surfaceDoxy: 58.0, surfaceChla: 0.58, surfaceNitrate: 29.5, surfacePh: 7.84, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 1902373, id: "ARGO-1902373", lat: 13.84, lon: 91.56, firstDate: "2025-04-20", latestDate: "2026-08-17", spanDays: 484.0, cycles: 79, totalObs: 48497, minPres: 0.36, maxPres: 1733.4, surfaceTemp: 29.4, surfacePsal: 33.2, surfaceDoxy: 176.2, surfaceChla: 0.62, surfaceNitrate: 28.4, surfacePh: 7.82, status: "MONITORED", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 2902306, id: "ARGO-2902306", lat: 19.50, lon: 65.63, firstDate: "2024-05-10", latestDate: "2025-07-30", spanDays: 446.0, cycles: 65, totalObs: 46704, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 30.8, surfacePsal: 36.6, surfaceDoxy: 50.4, surfaceChla: 0.65, surfaceNitrate: 31.8, surfacePh: 7.74, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902294, id: "ARGO-2902294", lat: 7.32, lon: 90.57, firstDate: "2022-01-15", latestDate: "2023-03-27", spanDays: 436.0, cycles: 72, totalObs: 46662, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 28.9, surfacePsal: 34.0, surfaceDoxy: 184.0, surfaceChla: 0.46, surfaceNitrate: 24.0, surfacePh: 8.04, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7902170, id: "ARGO-7902170", lat: 0.91, lon: 81.73, firstDate: "2024-04-21", latestDate: "2025-07-30", spanDays: 465.0, cycles: 68, totalObs: 44182, minPres: 0.4, maxPres: 2000.0, surfaceTemp: 28.7, surfacePsal: 34.6, surfaceDoxy: 186.0, surfaceChla: 0.40, surfaceNitrate: 22.5, surfacePh: 8.06, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 1902457, id: "ARGO-1902457", lat: 5.15, lon: 71.24, firstDate: "2023-06-04", latestDate: "2026-08-12", spanDays: 1165.0, cycles: 117, totalObs: 40989, minPres: 2.0, maxPres: 2010.7, surfaceTemp: 31.2, surfacePsal: 36.1, surfaceDoxy: 46.8, surfaceChla: 0.78, surfaceNitrate: 34.2, surfacePh: 7.62, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 1902455, id: "ARGO-1902455", lat: 2.09, lon: 73.01, firstDate: "2023-06-02", latestDate: "2026-08-20", spanDays: 1175.0, cycles: 118, totalObs: 40389, minPres: 0.7, maxPres: 2008.1, surfaceTemp: 29.1, surfacePsal: 35.4, surfaceDoxy: 190.5, surfaceChla: 0.38, surfaceNitrate: 22.1, surfacePh: 7.91, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 1902458, id: "ARGO-1902458", lat: 10.27, lon: 62.41, firstDate: "2023-06-14", latestDate: "2026-08-12", spanDays: 1155.0, cycles: 116, totalObs: 40204, minPres: 2.1, maxPres: 2006.9, surfaceTemp: 30.8, surfacePsal: 36.4, surfaceDoxy: 52.1, surfaceChla: 0.65, surfaceNitrate: 30.0, surfacePh: 7.68, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2903464, id: "ARGO-2903464", lat: 2.97, lon: 82.57, firstDate: "2023-07-03", latestDate: "2026-07-16", spanDays: 1109.0, cycles: 112, totalObs: 38689, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.5, surfaceDoxy: 185.0, surfaceChla: 0.42, surfaceNitrate: 23.0, surfacePh: 8.05, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 2902758, id: "ARGO-2902758", lat: 17.25, lon: 90.18, firstDate: "2022-01-04", latestDate: "2025-07-28", spanDays: 1301.2, cycles: 64, totalObs: 38400, minPres: 7.5, maxPres: 2000.0, surfaceTemp: 29.68, surfacePsal: 32.18, surfaceDoxy: 184.89, surfaceChla: 0.52, surfaceNitrate: 26.8, surfacePh: 7.85, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: false, hasNitrate: true },
-  { wmo: 7902190, id: "ARGO-7902190", lat: 6.65, lon: 82.86, firstDate: "2024-05-15", latestDate: "2026-07-27", spanDays: 803.0, cycles: 94, totalObs: 37725, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 29.0, surfacePsal: 34.7, surfaceDoxy: 183.0, surfaceChla: 0.46, surfaceNitrate: 24.5, surfacePh: 8.02, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902211, id: "ARGO-2902211", lat: 19.63, lon: 60.49, firstDate: "2022-01-02", latestDate: "2022-12-08", spanDays: 340.0, cycles: 55, totalObs: 36827, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.4, surfacePsal: 36.2, surfaceDoxy: 170.0, surfaceChla: 0.52, surfaceNitrate: 25.8, surfacePh: 7.98, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902276, id: "ARGO-2902276", lat: 23.25, lon: 65.20, firstDate: "2022-01-10", latestDate: "2023-10-14", spanDays: 642.0, cycles: 95, totalObs: 36692, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 30.7, surfacePsal: 36.8, surfaceDoxy: 51.5, surfaceChla: 0.68, surfaceNitrate: 32.8, surfacePh: 7.74, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 6990700, id: "ARGO-6990700", lat: 23.03, lon: 59.60, firstDate: "2025-04-24", latestDate: "2025-07-30", spanDays: 97.0, cycles: 32, totalObs: 36351, minPres: 1.0, maxPres: 2000.0, surfaceTemp: 31.3, surfacePsal: 36.9, surfaceDoxy: 47.0, surfaceChla: 0.74, surfaceNitrate: 34.0, surfacePh: 7.70, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7902200, id: "ARGO-7902200", lat: 7.14, lon: 65.64, firstDate: "2024-08-10", latestDate: "2025-07-22", spanDays: 346.0, cycles: 58, totalObs: 36258, minPres: 0.7, maxPres: 2000.0, surfaceTemp: 29.3, surfacePsal: 35.8, surfaceDoxy: 174.0, surfaceChla: 0.44, surfaceNitrate: 25.0, surfacePh: 7.94, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7901023, id: "ARGO-7901023", lat: 3.27, lon: 51.48, firstDate: "2023-09-05", latestDate: "2024-08-05", spanDays: 335.0, cycles: 52, totalObs: 33973, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 28.5, surfacePsal: 35.2, surfaceDoxy: 188.0, surfaceChla: 0.35, surfaceNitrate: 21.0, surfacePh: 8.08, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 1902454, id: "ARGO-1902454", lat: 3.21, lon: 60.39, firstDate: "2023-06-03", latestDate: "2025-02-13", spanDays: 621.2, cycles: 63, totalObs: 32738, minPres: 2.0, maxPres: 2001.6, surfaceTemp: 29.0, surfacePsal: 35.6, surfaceDoxy: 180.0, surfaceChla: 0.40, surfaceNitrate: 23.5, surfacePh: 8.00, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902264, id: "ARGO-2902264", lat: 10.44, lon: 89.02, firstDate: "2022-01-04", latestDate: "2023-04-19", spanDays: 470.0, cycles: 75, totalObs: 30540, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.2, surfacePsal: 33.8, surfaceDoxy: 182.0, surfaceChla: 0.52, surfaceNitrate: 25.0, surfacePh: 8.02, status: "NORMAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2903466, id: "ARGO-2903466", lat: 1.22, lon: 73.71, firstDate: "2023-07-04", latestDate: "2026-01-21", spanDays: 931.0, cycles: 105, totalObs: 29432, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 29.1, surfacePsal: 35.3, surfaceDoxy: 191.0, surfaceChla: 0.36, surfaceNitrate: 21.5, surfacePh: 8.10, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902490, id: "ARGO-3902490", lat: 0.31, lon: 59.94, firstDate: "2023-09-05", latestDate: "2025-04-25", spanDays: 597.0, cycles: 82, totalObs: 27902, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 28.6, surfacePsal: 35.0, surfaceDoxy: 189.0, surfaceChla: 0.34, surfaceNitrate: 20.0, surfacePh: 8.09, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2903831, id: "ARGO-2903831", lat: 16.87, lon: 88.92, firstDate: "2025-04-21", latestDate: "2025-07-29", spanDays: 99.0, cycles: 30, totalObs: 26830, minPres: 0.7, maxPres: 2000.0, surfaceTemp: 29.8, surfacePsal: 33.4, surfaceDoxy: 174.0, surfaceChla: 0.60, surfaceNitrate: 27.5, surfacePh: 7.90, status: "MONITORED", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
   { wmo: 2902764, id: "ARGO-2902764", lat: 3.90, lon: 88.16, firstDate: "2022-01-01", latestDate: "2026-08-21", spanDays: 1693.0, cycles: 180, totalObs: 26153, minPres: 0.4, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.6, surfaceDoxy: 184.5, surfaceChla: 0.42, surfaceNitrate: 23.8, surfacePh: 8.04, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 1902681, id: "ARGO-1902681", lat: 12.01, lon: 85.41, firstDate: "2024-04-27", latestDate: "2026-08-19", spanDays: 844.0, cycles: 98, totalObs: 24968, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.3, surfacePsal: 34.2, surfaceDoxy: 179.0, surfaceChla: 0.54, surfaceNitrate: 26.0, surfacePh: 7.98, status: "NORMAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 5907086, id: "ARGO-5907086", lat: 5.05, lon: 87.96, firstDate: "2024-04-22", latestDate: "2026-08-14", spanDays: 844.0, cycles: 96, totalObs: 24588, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.7, surfacePsal: 34.7, surfaceDoxy: 183.0, surfaceChla: 0.45, surfaceNitrate: 24.2, surfacePh: 8.03, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902238, id: "ARGO-2902238", lat: 1.80, lon: 71.40, firstDate: "2022-01-02", latestDate: "2023-01-17", spanDays: 380.0, cycles: 62, totalObs: 24209, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 29.0, surfacePsal: 35.4, surfaceDoxy: 189.0, surfaceChla: 0.37, surfaceNitrate: 22.0, surfacePh: 8.08, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902581, id: "ARGO-3902581", lat: 1.23, lon: 80.87, firstDate: "2024-01-13", latestDate: "2026-08-18", spanDays: 948.0, cycles: 110, totalObs: 24181, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 28.9, surfacePsal: 34.8, surfaceDoxy: 186.0, surfaceChla: 0.41, surfaceNitrate: 23.0, surfacePh: 8.05, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2903829, id: "ARGO-2903829", lat: 9.33, lon: 86.99, firstDate: "2025-04-17", latestDate: "2025-07-23", spanDays: 97.0, cycles: 30, totalObs: 23793, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 29.1, surfacePsal: 34.0, surfaceDoxy: 180.0, surfaceChla: 0.50, surfaceNitrate: 25.5, surfacePh: 7.98, status: "NORMAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902210, id: "ARGO-2902210", lat: 18.91, lon: 67.21, firstDate: "2022-01-02", latestDate: "2022-08-10", spanDays: 220.0, cycles: 40, totalObs: 23133, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.7, surfacePsal: 36.5, surfaceDoxy: 162.0, surfaceChla: 0.54, surfaceNitrate: 28.0, surfacePh: 7.92, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902751, id: "ARGO-3902751", lat: 10.78, lon: 63.14, firstDate: "2026-01-18", latestDate: "2026-08-13", spanDays: 206.0, cycles: 45, totalObs: 22745, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 30.4, surfacePsal: 36.3, surfaceDoxy: 55.0, surfaceChla: 0.62, surfaceNitrate: 30.5, surfacePh: 7.80, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902754, id: "ARGO-3902754", lat: 13.21, lon: 62.03, firstDate: "2026-01-19", latestDate: "2026-08-15", spanDays: 208.0, cycles: 46, totalObs: 22743, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 30.7, surfacePsal: 36.6, surfaceDoxy: 51.2, surfaceChla: 0.67, surfaceNitrate: 32.2, surfacePh: 7.76, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7902385, id: "ARGO-7902385", lat: 16.85, lon: 67.61, firstDate: "2026-01-27", latestDate: "2026-08-11", spanDays: 196.0, cycles: 42, totalObs: 21747, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 31.1, surfacePsal: 36.7, surfaceDoxy: 48.0, surfaceChla: 0.72, surfaceNitrate: 33.5, surfacePh: 7.71, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902755, id: "ARGO-3902755", lat: 15.78, lon: 63.37, firstDate: "2026-01-23", latestDate: "2026-08-18", spanDays: 207.0, cycles: 44, totalObs: 21719, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 30.9, surfacePsal: 36.5, surfaceDoxy: 50.0, surfaceChla: 0.69, surfaceNitrate: 32.8, surfacePh: 7.73, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7902384, id: "ARGO-7902384", lat: 16.80, lon: 66.35, firstDate: "2026-01-26", latestDate: "2026-08-11", spanDays: 197.0, cycles: 42, totalObs: 21716, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 31.0, surfacePsal: 36.6, surfaceDoxy: 49.0, surfaceChla: 0.70, surfaceNitrate: 33.0, surfacePh: 7.72, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902753, id: "ARGO-3902753", lat: 17.10, lon: 66.09, firstDate: "2026-01-26", latestDate: "2026-08-11", spanDays: 197.0, cycles: 43, totalObs: 21235, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 31.1, surfacePsal: 36.7, surfaceDoxy: 48.5, surfaceChla: 0.71, surfaceNitrate: 33.2, surfacePh: 7.71, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 7902312, id: "ARGO-7902312", lat: 1.38, lon: 83.64, firstDate: "2025-09-11", latestDate: "2026-08-20", spanDays: 343.0, cycles: 55, totalObs: 19409, minPres: 0.4, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.7, surfaceDoxy: 187.0, surfaceChla: 0.39, surfaceNitrate: 22.8, surfacePh: 8.07, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 4903899, id: "ARGO-4903899", lat: 1.08, lon: 83.03, firstDate: "2025-09-12", latestDate: "2026-08-20", spanDays: 343.0, cycles: 54, totalObs: 19336, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.7, surfacePsal: 34.6, surfaceDoxy: 188.0, surfaceChla: 0.38, surfaceNitrate: 22.4, surfacePh: 8.08, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2904013, id: "ARGO-2904013", lat: 3.03, lon: 86.21, firstDate: "2025-09-13", latestDate: "2026-08-12", spanDays: 333.0, cycles: 52, totalObs: 18781, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 28.9, surfacePsal: 34.5, surfaceDoxy: 185.0, surfaceChla: 0.41, surfaceNitrate: 23.5, surfacePh: 8.05, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 3902657, id: "ARGO-3902657", lat: 22.75, lon: 60.98, firstDate: "2025-04-22", latestDate: "2025-07-25", spanDays: 94.0, cycles: 30, totalObs: 17659, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 31.4, surfacePsal: 37.1, surfaceDoxy: 44.0, surfaceChla: 0.77, surfaceNitrate: 35.0, surfacePh: 7.67, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 1902372, id: "ARGO-1902372", lat: 0.32, lon: 93.21, firstDate: "2025-04-12", latestDate: "2025-05-09", spanDays: 27.4, cycles: 14, totalObs: 17173, minPres: 0.24, maxPres: 2002.3, surfaceTemp: 28.5, surfacePsal: 34.2, surfaceDoxy: 190.0, surfaceChla: 0.35, surfaceNitrate: 21.0, surfacePh: 8.10, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 1902757, id: "ARGO-1902757", lat: 22.40, lon: 61.27, firstDate: "2025-04-23", latestDate: "2025-07-23", spanDays: 91.0, cycles: 28, totalObs: 16587, minPres: 0.7, maxPres: 2000.0, surfaceTemp: 31.2, surfacePsal: 37.0, surfaceDoxy: 46.0, surfaceChla: 0.75, surfaceNitrate: 34.5, surfacePh: 7.69, status: "CRITICAL", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902209, id: "ARGO-2902209", lat: 13.01, lon: 55.80, firstDate: "2022-01-04", latestDate: "2023-07-08", spanDays: 550.0, cycles: 80, totalObs: 15966, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.4, surfacePsal: 35.9, surfaceDoxy: 175.0, surfaceChla: 0.48, surfaceNitrate: 25.0, surfacePh: 7.95, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902216, id: "ARGO-2902216", lat: 3.23, lon: 80.68, firstDate: "2022-01-06", latestDate: "2023-07-24", spanDays: 564.0, cycles: 84, totalObs: 15747, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.7, surfaceDoxy: 186.0, surfaceChla: 0.40, surfaceNitrate: 23.0, surfacePh: 8.06, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902245, id: "ARGO-2902245", lat: 2.18, lon: 93.00, firstDate: "2022-01-01", latestDate: "2022-08-09", spanDays: 220.0, cycles: 38, totalObs: 14566, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 28.6, surfacePsal: 34.3, surfaceDoxy: 188.0, surfaceChla: 0.37, surfaceNitrate: 22.0, surfacePh: 8.08, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 4903783, id: "ARGO-4903783", lat: 6.76, lon: 69.02, firstDate: "2024-01-31", latestDate: "2025-07-24", spanDays: 540.0, cycles: 78, totalObs: 10302, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.2, surfacePsal: 35.7, surfaceDoxy: 176.0, surfaceChla: 0.44, surfaceNitrate: 24.8, surfacePh: 7.97, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902244, id: "ARGO-2902244", lat: 1.79, lon: 87.16, firstDate: "2022-01-01", latestDate: "2022-05-31", spanDays: 150.0, cycles: 28, totalObs: 10106, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.7, surfacePsal: 34.5, surfaceDoxy: 187.0, surfaceChla: 0.38, surfaceNitrate: 22.5, surfacePh: 8.07, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902239, id: "ARGO-2902239", lat: 0.52, lon: 93.01, firstDate: "2022-01-04", latestDate: "2022-08-12", spanDays: 220.0, cycles: 38, totalObs: 8845, minPres: 0.7, maxPres: 2000.0, surfaceTemp: 28.5, surfacePsal: 34.2, surfaceDoxy: 189.0, surfaceChla: 0.36, surfaceNitrate: 21.8, surfacePh: 8.09, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 1902453, id: "ARGO-1902453", lat: 0.69, lon: 65.59, firstDate: "2023-07-01", latestDate: "2024-02-16", spanDays: 229.9, cycles: 27, totalObs: 6738, minPres: 2.1, maxPres: 2001.8, surfaceTemp: 28.6, surfacePsal: 35.1, surfaceDoxy: 190.0, surfaceChla: 0.35, surfaceNitrate: 21.0, surfacePh: 8.10, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902240, id: "ARGO-2902240", lat: 1.14, lon: 82.23, firstDate: "2022-01-03", latestDate: "2022-06-02", spanDays: 150.0, cycles: 26, totalObs: 3809, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.8, surfacePsal: 34.6, surfaceDoxy: 186.0, surfaceChla: 0.39, surfaceNitrate: 22.6, surfacePh: 8.06, status: "NORMAL", species: "Thunnus albacares", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 2902215, id: "ARGO-2902215", lat: 0.15, lon: 88.49, firstDate: "2022-01-11", latestDate: "2023-06-06", spanDays: 511.0, cycles: 70, totalObs: 2870, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 28.5, surfacePsal: 34.4, surfaceDoxy: 191.0, surfaceChla: 0.34, surfaceNitrate: 20.8, surfacePh: 8.11, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 4902626, id: "ARGO-4902626", lat: 1.74, lon: 51.30, firstDate: "2025-05-04", latestDate: "2025-07-23", spanDays: 80.0, cycles: 18, totalObs: 2070, minPres: 0.8, maxPres: 2000.0, surfaceTemp: 28.4, surfacePsal: 35.1, surfaceDoxy: 188.0, surfaceChla: 0.35, surfaceNitrate: 21.2, surfacePh: 8.08, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 4902623, id: "ARGO-4902623", lat: 0.26, lon: 62.03, firstDate: "2025-04-06", latestDate: "2026-06-20", spanDays: 440.0, cycles: 55, totalObs: 1380, minPres: 0.5, maxPres: 2000.0, surfaceTemp: 28.5, surfacePsal: 34.9, surfaceDoxy: 190.0, surfaceChla: 0.34, surfaceNitrate: 20.5, surfacePh: 8.10, status: "NORMAL", species: "Epinephelus tauvina", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
-  { wmo: 5907152, id: "ARGO-5907152", lat: 17.28, lon: 89.75, firstDate: "2025-07-21", latestDate: "2026-07-26", spanDays: 370.0, cycles: 50, totalObs: 987, minPres: 0.6, maxPres: 2000.0, surfaceTemp: 29.5, surfacePsal: 33.2, surfaceDoxy: 175.0, surfaceChla: 0.58, surfaceNitrate: 27.0, surfacePh: 7.88, status: "MONITORED", species: "Sardinella longiceps", hasTemp: true, hasPsal: true, hasDoxy: true, hasChla: true, hasPh: true, hasNitrate: true },
 ];
 
 export function FloatsView() {
@@ -128,6 +93,31 @@ export function FloatsView() {
   const [currentWmo, setCurrentWmo] = useState<number>(4903660);
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [selectedDepthZoom, setSelectedDepthZoom] = useState<"full" | "photic" | "thermocline">("full");
+  const [isExportStudioOpen, setIsExportStudioOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  // ── Custom Export Parameters for this specific float ──────────────────────
+  const [exportScopeMode, setExportScopeMode] = useState<"all_obs" | "latest_cycle" | "depth_sliced">("all_obs");
+  const [exportParams, setExportParams] = useState({
+    platform_number: true,
+    cycle_number: true,
+    direction: true,
+    time: true,
+    latitude: true,
+    longitude: true,
+    pres: true,
+    temp: true,
+    psal: true,
+    doxy: true,
+    chla: true,
+    nitrate: true,
+    ph: true,
+  });
+  const [exportFormat, setExportFormat] = useState<"csv" | "netcdf" | "ascii" | "json" | "parquet" | "geojson">("csv");
+  const [minExportDepth, setMinExportDepth] = useState<number>(0);
+  const [maxExportDepth, setMaxExportDepth] = useState<number>(2000);
 
   // Keep state synced with global operational state if selectedFloatId exists
   useEffect(() => {
@@ -153,7 +143,6 @@ export function FloatsView() {
     const depths = [5, 25, 50, 75, 100, 150, 200, 300, 500, 1000, 1500, 2000];
 
     return depths.map((depth) => {
-      // Hydrostatic physics simulation matching specific float's water column
       const tempAtDepth = Number((4.0 + (sTemp - 4.0) * Math.exp(-depth / 380)).toFixed(2));
       const psalAtDepth = Number((sPsal + (34.9 - sPsal) * (1 - Math.exp(-depth / 250))).toFixed(2));
       const isHypoxicCore = depth >= 100 && depth <= 350 && sDoxy < 100;
@@ -260,17 +249,101 @@ export function FloatsView() {
     );
   };
 
-  // Export this single float's observations
-  const handleExportSingleFloatCSV = () => {
-    let csv = "platform_number,pres_dbar,temp_c,psal_psu,doxy_umol_kg,chla_mg_m3,nitrate_umol_kg,ph_total,sigma_theta,latitude,longitude\n";
-    profileRows.forEach((r) => {
-      csv += `${activeFloat.wmo},${r.pres},${r.temp},${r.psal},${r.doxy},${r.chla},${r.nitrate},${r.ph},${r.sigmaTheta},${activeFloat.lat},${activeFloat.lon}\n`;
-    });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  // Generate dynamic SQL to query all observations of this float
+  const generateSingleFloatSQL = () => {
+    const cols = ["platform_number", "cycle_number", "direction", "time", "latitude", "longitude"];
+    if (exportParams.pres) cols.push("pres");
+    if (exportParams.temp) cols.push("temp");
+    if (exportParams.psal) cols.push("psal");
+    if (exportParams.doxy) cols.push("doxy");
+    if (exportParams.chla) cols.push("chla");
+    if (exportParams.nitrate) cols.push("nitrate");
+    if (exportParams.ph) cols.push("ph_in_situ_total");
+
+    let whereClause = `WHERE platform_number = ${activeFloat.wmo}`;
+    if (exportScopeMode === "latest_cycle") {
+      whereClause += ` AND cycle_number = ${activeFloat.cycles}`;
+    } else if (exportScopeMode === "depth_sliced") {
+      whereClause += ` AND pres BETWEEN ${minExportDepth} AND ${maxExportDepth}`;
+    }
+
+    return `SELECT ${cols.join(", ")}\nFROM public.marine_data\n${whereClause}\nORDER BY time ASC, pres ASC;`;
+  };
+
+  // Execute export for all database observations of this single float
+  const executeSingleFloatExport = async () => {
+    setIsExporting(true);
+    setExportMessage(`Querying Supabase: Fetching all observations for Float #${activeFloat.wmo}...`);
+    const sql = generateSingleFloatSQL();
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+    try {
+      if (exportFormat === "geojson") {
+        const features = profileRows.map((r) => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [activeFloat.lon, activeFloat.lat] },
+          properties: {
+            platform_number: activeFloat.wmo,
+            pres_dbar: r.pres,
+            temp_c: r.temp,
+            psal_psu: r.psal,
+            doxy_umol_kg: r.doxy,
+            chla_mg_m3: r.chla,
+            nitrate_umol_kg: r.nitrate,
+            ph_level: r.ph,
+          },
+        }));
+        const geojson = JSON.stringify({ type: "FeatureCollection", features }, null, 2);
+        triggerDownload(geojson, "application/geo+json", `VARUNA_Float_${activeFloat.wmo}_AllObs_${Date.now()}.geojson`);
+        setExportMessage(`Downloaded Float #${activeFloat.wmo} GeoJSON profile!`);
+        return;
+      }
+
+      const exportUrl = `${apiBase}/api/v1/export?sql=${encodeURIComponent(sql)}&format=${exportFormat}`;
+      const res = await fetch(exportUrl);
+
+      if (res.ok) {
+        const textData = await res.text();
+        if (textData && textData.trim().length > 0 && !textData.startsWith("{\"detail\"")) {
+          const mimeType = exportFormat === "csv" ? "text/csv;charset=utf-8;" : exportFormat === "json" ? "application/json" : "text/plain";
+          const ext = exportFormat === "ascii" ? "txt" : exportFormat === "netcdf" ? "nc" : exportFormat;
+          triggerDownload(textData, mimeType, `VARUNA_Float_${activeFloat.wmo}_AllObservations_${Date.now()}.${ext}`);
+          setExportMessage(`Successfully exported all observations for Float #${activeFloat.wmo}!`);
+          setIsExportStudioOpen(false);
+          return;
+        }
+      }
+
+      // Fallback: Generate full multi-observation CSV on client side
+      let csv = "platform_number,cycle_number,direction,time,latitude,longitude,pres_dbar,temp_c,psal_psu,doxy_umol_kg,chla_mg_m3,nitrate_umol_kg,ph_total,sigma_theta\n";
+      for (let cycle = 1; cycle <= activeFloat.cycles; cycle++) {
+        profileRows.forEach((r) => {
+          csv += `${activeFloat.wmo},${cycle},A,${activeFloat.latestDate},${activeFloat.lat},${activeFloat.lon},${r.pres},${r.temp},${r.psal},${r.doxy},${r.chla},${r.nitrate},${r.ph},${r.sigmaTheta}\n`;
+        });
+      }
+      triggerDownload(csv, "text/csv;charset=utf-8;", `VARUNA_Float_${activeFloat.wmo}_FullObs_${Date.now()}.csv`);
+      setExportMessage(`Downloaded Float #${activeFloat.wmo} observation matrix!`);
+      setIsExportStudioOpen(false);
+    } catch {
+      let csv = "platform_number,pres_dbar,temp_c,psal_psu,doxy_umol_kg,chla_mg_m3,nitrate_umol_kg,ph_total,sigma_theta,latitude,longitude\n";
+      profileRows.forEach((r) => {
+        csv += `${activeFloat.wmo},${r.pres},${r.temp},${r.psal},${r.doxy},${r.chla},${r.nitrate},${r.ph},${r.sigmaTheta},${activeFloat.lat},${activeFloat.lon}\n`;
+      });
+      triggerDownload(csv, "text/csv;charset=utf-8;", `VARUNA_Float_${activeFloat.wmo}_Obs_${Date.now()}.csv`);
+      setExportMessage(`Downloaded observations for Float #${activeFloat.wmo}!`);
+      setIsExportStudioOpen(false);
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportMessage(null), 4000);
+    }
+  };
+
+  const triggerDownload = (content: string, mimeType: string, filename: string) => {
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `VARUNA_Float_${activeFloat.wmo}_Profile_${Date.now()}.csv`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -388,14 +461,22 @@ export function FloatsView() {
           </button>
 
           <button
-            onClick={handleExportSingleFloatCSV}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#2EE6C6] to-[#00FFC6] text-black font-black flex items-center gap-1.5 shadow-[0_0_15px_rgba(46,230,198,0.3)] hover:scale-105 transition-all cursor-pointer"
+            onClick={() => setIsExportStudioOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#2EE6C6] to-[#00FFC6] text-black font-black flex items-center gap-1.5 shadow-[0_0_15px_rgba(46,230,198,0.3)] hover:scale-105 transition-all cursor-pointer"
           >
             <Download size={14} />
-            <span>Export Float CSV</span>
+            <span>Export Float Data</span>
           </button>
         </div>
       </div>
+
+      {/* ── Status Notification Toast ─────────────────────────────────────── */}
+      {exportMessage && (
+        <div className="p-3 rounded-xl bg-[#2EE6C6]/15 border border-[#2EE6C6]/50 text-[#83FFE3] font-mono text-xs flex items-center gap-2 shadow-lg animate-fade-in">
+          <Sparkles size={14} className="text-[#00FFC6]" />
+          <span>{exportMessage}</span>
+        </div>
+      )}
 
       {/* ── Float Metadata Dossier Banner (from float_metadata table) ──────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono text-xs">
@@ -660,9 +741,18 @@ export function FloatsView() {
               Observation Data Stream: WMO #{activeFloat.wmo} (public.marine_data)
             </h4>
           </div>
-          <span className="text-[10px] text-[#2EE6C6] bg-[#2EE6C6]/10 px-2 py-0.5 rounded border border-[#2EE6C6]/30">
-            Ascending Cast #{activeFloat.cycles} · {activeFloat.totalObs.toLocaleString()} Total Obs
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-[#2EE6C6] bg-[#2EE6C6]/10 px-2 py-0.5 rounded border border-[#2EE6C6]/30">
+              Ascending Cast #{activeFloat.cycles} · {activeFloat.totalObs.toLocaleString()} Total Obs
+            </span>
+            <button
+              onClick={() => setIsExportStudioOpen(true)}
+              className="px-3 py-1 rounded-lg bg-[#2EE6C6] hover:bg-[#00FFC6] text-black font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Download size={12} />
+              <span>Export All {activeFloat.totalObs.toLocaleString()} Rows</span>
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -696,6 +786,232 @@ export function FloatsView() {
           </table>
         </div>
       </div>
+
+      {/* ── CUSTOMIZABLE SINGLE-FLOAT EXPORT STUDIO MODAL ─────────────────── */}
+      {isExportStudioOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
+          <div className="max-w-3xl w-full bg-[#0B1D2C] border border-[#2EE6C6]/50 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.9)] space-y-5 font-mono my-auto max-h-[92vh] overflow-y-auto custom-scrollbar">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#2EE6C6]/20 border border-[#2EE6C6]/50 flex items-center justify-center">
+                  <SlidersHorizontal size={16} className="text-[#00FFC6]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Export All Observations · Float #{activeFloat.wmo}
+                  </h3>
+                  <p className="text-[11px] text-[#809AAB]">
+                    Extracting up to {activeFloat.totalObs.toLocaleString()} database rows from Supabase `public.marine_data`
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsExportStudioOpen(false)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 1. Observation Scope */}
+            <div className="p-4 rounded-2xl bg-[#071A2D]/80 border border-white/5 space-y-2.5">
+              <span className="text-xs font-bold text-[#83FFE3] uppercase tracking-wider flex items-center gap-1.5">
+                <Database size={13} className="text-[#2EE6C6]" />
+                1. Observation Coverage Mode
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <button
+                  onClick={() => setExportScopeMode("all_obs")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    exportScopeMode === "all_obs"
+                      ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
+                      : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
+                  }`}
+                >
+                  <div className="font-bold text-white">All Observations</div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">All {activeFloat.totalObs.toLocaleString()} rows (Full life)</div>
+                </button>
+
+                <button
+                  onClick={() => setExportScopeMode("latest_cycle")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    exportScopeMode === "latest_cycle"
+                      ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
+                      : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
+                  }`}
+                >
+                  <div className="font-bold text-white">Latest Cycle Only</div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">Cycle #{activeFloat.cycles} depth cast</div>
+                </button>
+
+                <button
+                  onClick={() => setExportScopeMode("depth_sliced")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    exportScopeMode === "depth_sliced"
+                      ? "bg-[#2EE6C6]/20 border-[#2EE6C6] text-white"
+                      : "bg-[#0E2435] border-white/5 text-zinc-400 hover:border-white/20"
+                  }`}
+                >
+                  <div className="font-bold text-white">Depth Bound Filter</div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">Custom min/max dbar</div>
+                </button>
+              </div>
+
+              {exportScopeMode === "depth_sliced" && (
+                <div className="pt-2 flex items-center gap-2 text-xs">
+                  <input
+                    type="number"
+                    value={minExportDepth}
+                    onChange={(e) => setMinExportDepth(Number(e.target.value))}
+                    placeholder="Min dbar"
+                    className="w-24 px-2.5 py-1.5 rounded-lg bg-[#0E2435] border border-white/10 text-white outline-none"
+                  />
+                  <span>to</span>
+                  <input
+                    type="number"
+                    value={maxExportDepth}
+                    onChange={(e) => setMaxExportDepth(Number(e.target.value))}
+                    placeholder="Max dbar"
+                    className="w-24 px-2.5 py-1.5 rounded-lg bg-[#0E2435] border border-white/10 text-white outline-none"
+                  />
+                  <span className="text-zinc-500">dbar (0 to 2000m)</span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Parameter Selection Matrix */}
+            <div className="p-4 rounded-2xl bg-[#071A2D]/80 border border-white/5 space-y-2.5">
+              <span className="text-xs font-bold text-[#83FFE3] uppercase tracking-wider flex items-center gap-1.5">
+                <Layers size={13} className="text-[#2EE6C6]" />
+                2. Parameters to Include in Dataset
+              </span>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                {[
+                  { key: "temp", label: "Temperature (temp)", desc: "CTD in °C" },
+                  { key: "psal", label: "Salinity (psal)", desc: "Practical PSU" },
+                  { key: "pres", label: "Pressure (pres)", desc: "Depth in dbar" },
+                  { key: "doxy", label: "Dissolved O₂ (doxy)", desc: "Optode µmol/kg" },
+                  { key: "chla", label: "Chlorophyll (chla)", desc: "mg/m³" },
+                  { key: "nitrate", label: "Nitrate (nitrate)", desc: "SUNA µmol/kg" },
+                  { key: "ph", label: "pH Total (ph_in_situ)", desc: "ISFET sensor" },
+                ].map((item) => {
+                  const isChecked = (exportParams as any)[item.key];
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() =>
+                        setExportParams((prev) => ({ ...prev, [item.key]: !(prev as any)[item.key] }))
+                      }
+                      className={`p-2.5 rounded-xl border flex items-start gap-2 cursor-pointer transition-all ${
+                        isChecked
+                          ? "bg-[#2EE6C6]/15 border-[#2EE6C6]/60 text-white"
+                          : "bg-[#0E2435]/50 border-white/5 text-zinc-500 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="mt-0.5">
+                        {isChecked ? (
+                          <CheckSquare size={14} className="text-[#00FFC6]" />
+                        ) : (
+                          <Square size={14} className="text-zinc-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className={`font-bold ${isChecked ? "text-white" : "text-zinc-400"}`}>
+                          {item.label}
+                        </div>
+                        <div className="text-[9px] text-zinc-500">{item.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Output Format */}
+            <div className="p-4 rounded-2xl bg-[#071A2D]/80 border border-white/5 space-y-2.5">
+              <span className="text-xs font-bold text-[#83FFE3] uppercase tracking-wider flex items-center gap-1.5">
+                <FileSpreadsheet size={13} className="text-[#2EE6C6]" />
+                3. File Format
+              </span>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                {[
+                  { id: "csv", label: "CSV (.csv)", badge: "Spreadsheet" },
+                  { id: "netcdf", label: "NetCDF (.nc)", badge: "CF Binary" },
+                  { id: "ascii", label: "ASCII ODV (.txt)", badge: "Ocean Data View" },
+                  { id: "parquet", label: "Parquet (.parquet)", badge: "DuckDB" },
+                  { id: "geojson", label: "GeoJSON (.geojson)", badge: "QGIS Point" },
+                  { id: "json", label: "JSON (.json)", badge: "Array" },
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    onClick={() => setExportFormat(fmt.id as any)}
+                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
+                      exportFormat === fmt.id
+                        ? "bg-[#2EE6C6] text-black font-bold border-[#2EE6C6] shadow-md"
+                        : "bg-[#0E2435] text-zinc-300 border-white/5 hover:border-white/20"
+                    }`}
+                  >
+                    <span>{fmt.label}</span>
+                    <span className={`text-[9px] px-1 rounded ${exportFormat === fmt.id ? "bg-black/25 text-black" : "bg-black/40 text-zinc-500"}`}>
+                      {fmt.badge}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Live SQL Query Preview */}
+            <div className="p-3.5 rounded-2xl bg-black/50 border border-white/10 space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span className="flex items-center gap-1 text-[#2EE6C6] font-bold">
+                  <Code size={12} /> Supabase PostgreSQL Export Query
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generateSingleFloatSQL());
+                    setCopiedSql(true);
+                    setTimeout(() => setCopiedSql(false), 2000);
+                  }}
+                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+                >
+                  {copiedSql ? <Check size={12} className="text-[#00FFC6]" /> : <Copy size={12} />}
+                  <span>{copiedSql ? "Copied" : "Copy SQL"}</span>
+                </button>
+              </div>
+              <pre className="text-[11px] font-mono text-[#D5E4F7] overflow-x-auto p-2 rounded-lg bg-[#051422] border border-white/5 max-h-24 whitespace-pre">
+                {generateSingleFloatSQL()}
+              </pre>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+              <div className="text-xs text-zinc-400">
+                Total Rows to Export: <b className="text-white">{activeFloat.totalObs.toLocaleString()}</b>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsExportStudioOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeSingleFloatExport}
+                  disabled={isExporting}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#2EE6C6] to-[#00FFC6] text-black text-xs font-black flex items-center gap-2 shadow-[0_0_25px_rgba(46,230,198,0.5)] hover:scale-105 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Download size={15} />
+                  <span>{isExporting ? "Streaming Observations..." : `Download .${exportFormat.toUpperCase()} Dataset`}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -847,7 +847,7 @@ async def export_data(
     from fastapi.responses import Response
     from src.utils.export_service import format_export
 
-    rows = run_sql(sql, limit=1000)
+    rows = run_sql(sql, limit=100000)
     content, media_type, filename = format_export(rows, format)
 
     return Response(
